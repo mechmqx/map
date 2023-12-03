@@ -8,25 +8,7 @@
 #include "stb_image.h"
 #endif
 
-short index[TILE_I_NUM];
 
-void genIndex() {
-	for (int j = 0; j < GRID_SIZE - 1; j++) {
-		static int idx = 0;
-		for (int i = 0; i < GRID_SIZE;i++) {
-			index[idx] = i + j * GRID_SIZE;
-			idx++;
-			index[idx] = i + (j+1) * GRID_SIZE;
-			idx++;
-		}
-		if (j < GRID_SIZE - 1) {
-			index[idx] = (j + 1) * GRID_SIZE+ GRID_SIZE-1;
-			idx++;
-			index[idx] = (j + 1) * GRID_SIZE;
-			idx++;
-		}
-	}
-}
 
 void cacheEle::genVertex(tileId& id) {
 	//GRID_SIZE

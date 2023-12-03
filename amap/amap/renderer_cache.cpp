@@ -10,6 +10,10 @@ void renderCache::freeCache(short idx) {
 
 }
 
+RendererEle& renderCache::getElement(short idx) {
+	return cache[idx];
+}
+
 renderCache::renderCache()
 {
 }

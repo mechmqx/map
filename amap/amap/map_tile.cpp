@@ -7,6 +7,13 @@ tileId::tileId() {
 	this->yidx = -1;
 }
 
+tileId::tileId(unsigned short l, unsigned short x, unsigned short y) {
+
+	this->level = l;
+	this->xidx = x;
+	this->yidx = y;
+}
+
 mapTile::mapTile()
 {
 	this->id = tileId();

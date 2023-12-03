@@ -8,6 +8,7 @@ enum eRendererState {
 	eRenderReady,
 };
 class RendererEle {
+public:
 	int vbo;
 	int texId;
 	eRendererState state;
@@ -22,6 +23,8 @@ public:
 
 	short getFreeCacheIndex();
 	void freeCache(short idx);
+
+	RendererEle& getElement(short idx);
 
 private:
 	RendererEle cache[RENDER_CACHE_SIZE];

@@ -7,6 +7,7 @@ public:
 	unsigned short xidx;
 	unsigned short yidx;
 	tileId();
+	tileId(unsigned short l, unsigned short x, unsigned short y);
 };
 
 class mapTile

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "config.h"
-#include "type_define.h"
 #include "map_tile.h"
+#include "MAP_Math.h"
 
 #define DATA_CACHE_SIZE (128)
 
@@ -16,7 +16,7 @@ enum eCacheState{
 
 
 typedef struct _cacheEle {
-	vertex2f vert[TILE_V_NUM];
+	Vec2f vert[TILE_V_NUM];
 	char image[IMG_CHN* IMG_SIZE* IMG_SIZE];
 	eCacheState state;   // 0: empty	1:load vert	2:load image	3:ready
 	void genVertex(tileId& id);
