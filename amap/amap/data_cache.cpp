@@ -8,7 +8,10 @@
 #include "stb_image.h"
 #endif
 
-
+cacheEle::cacheEle() {
+	state = eEmpty;
+}
+cacheEle::~cacheEle() {}
 
 void cacheEle::genVertex(tileId& id) {
 	//GRID_SIZE

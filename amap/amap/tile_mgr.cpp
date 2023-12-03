@@ -8,7 +8,14 @@ int tileManager::getFreeTile() {
 	return 0;
 }
 
+// todo: not use this api, use input level; and use frustum clip to judge tile visiblity;
+// use background thread to load data, traverse the data pool;
 int tileManager::addTile(tileId& id) {
+	// 1. get a free tile
+
+	// 2. add tile index into list
+
+	// 3. 
 
 	return 0;
 }
