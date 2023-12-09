@@ -6,6 +6,7 @@ public:
 	unsigned short level;
 	unsigned short xidx;
 	unsigned short yidx;
+	int getKey();
 	tileId();
 	tileId(unsigned short l, unsigned short x, unsigned short y);
 };
@@ -16,10 +17,10 @@ public:
 	tileId id;
 
 	// cache data
-	short dataIdx;
+	int dataIdx;
 
 	// render obj
-	short renderIdx;
+	int renderIdx;
 
 	mapTile();
 	~mapTile();

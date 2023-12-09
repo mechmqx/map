@@ -3,6 +3,7 @@
 #include <string>
 #include <assert.h>
 
+
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -41,15 +42,23 @@ void cacheEle::loadTexture(tileId& id) {
 	stbi_image_free(pixels);
 }
 
-dataCache::dataCache() {}
+dataCache::dataCache() {
+	_lru = new LRUCache(DATA_CACHE_SIZE);
+}
 
 dataCache::~dataCache() {}
 
 
-short dataCache::getFreeCacheIndex() {
-	return 0;
+int dataCache::getFreeCacheIndex(int key) {
+	eIRUState state = eIRUNew;
+	int ret = _lru->get(key, state);
+	if (state != eIRUReady) {
+	    cache[ret].state = eWaitLoading;
+	}
+
+	return ret;
 }
 
 void dataCache::freeCache(short idx) {
-
+	delete _lru;
 }

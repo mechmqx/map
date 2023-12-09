@@ -1,33 +1,85 @@
 #include "tile_mgr.h"
 #include "esUtil.h"
 
-mapTile* tileManager::getTile(short index) {
-	return &this->tileCache[index];
+#include <thread>
+
+
+mapTile& tileManager::getTile(int index) {
+	return this->tileCache[index];
 }
-int tileManager::getFreeTile() {
-	return 0;
+int tileManager::getFreeTile(int key) {
+	eIRUState state = eIRUNew;
+	return this->_lru->get(key, state);
 }
 
 // todo: not use this api, use input level; and use frustum clip to judge tile visiblity;
 // use background thread to load data, traverse the data pool;
 int tileManager::addTile(tileId& id) {
 	// 1. get a free tile
+	int idx = getFreeTile(id.getKey());
 
-	// 2. add tile index into list
+	// 2. fill tile
+	auto& tile = tileCache[idx];
+	tile.id = id;
+	tile.dataIdx = this->dataMgr->getFreeCacheIndex(id.getKey());
+	tile.renderIdx = this->renderMgr->getFreeCacheIndex(id.getKey());
 
-	// 3. 
+	// 3.add tile index into list
+	this->tileList.push_back(idx);
 
 	return 0;
 }
 
-RendererEle& tileManager::getRederEle(short idx) {
-	return renderMgr->getElement(idx);
+// traverse the data pool and load the data from file system
+unsigned long tileManager::backgroundProcess() {
+	for (;;) {
+
+		for (int i = 0; i < TILE_CACHE_SIZE; i++)
+		{
+			auto& tile = this->tileCache[i];
+
+			if (tile.dataIdx == -1) { continue; }
+
+			auto& cache = this->dataMgr->cache[tile.dataIdx];
+
+			if (cache.state == eWaitLoading) {
+				cache.state = eLoadVertex;
+				// 1. gen vertex
+				cache.genVertex(tile.id);
+
+				cache.state = eLoadImage;
+				// 2. load image
+				cache.loadTexture(tile.id);
+
+				cache.state = eReady;
+			}
+		}
+	}
+	return 0;
+}
+
+void tileManager::UpdateRenderEle(mapTile& tile) {
+	auto& cache = this->dataMgr->cache[tile.dataIdx];
+	if (cache.state != eReady)
+		return;
+
+	this->renderMgr->updateEle(tile.renderIdx, cache);
+}
+RendererEle& tileManager::getRenderEle(short idx) {
+	auto& ele = renderMgr->getElement(idx);
+
+	return ele;
 }
 
 tileManager::tileManager()
 {
 	this->dataMgr = new dataCache();
 	this->renderMgr = new renderCache();
+	this->_lru = new LRUCache(TILE_CACHE_SIZE);
+
+	// task spawn: data loading thread
+	std::thread t(&tileManager::backgroundProcess, this);
+	t.detach();
 	
 	/*
 	unsigned int tbo;
@@ -76,4 +128,6 @@ tileManager::~tileManager()
 
 	glDeleteBuffers(1, &ibo);
 	glDeleteBuffers(1, &tbo);
+
+	delete _lru;
 }

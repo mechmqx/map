@@ -3,6 +3,7 @@
 #include "config.h"
 #include "map_tile.h"
 #include "MAP_Math.h"
+#include "lru_cache.h"
 
 #define DATA_CACHE_SIZE (128)
 
@@ -30,8 +31,9 @@ class dataCache {
 public:
 	dataCache();
 	~dataCache();
-	short getFreeCacheIndex();
+	int getFreeCacheIndex(int key);
 	void freeCache(short idx);
 	cacheEle cache[DATA_CACHE_SIZE];
 private:
+	LRUCache* _lru;
 };

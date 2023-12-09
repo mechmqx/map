@@ -71,7 +71,7 @@ int Init ( ESContext *esContext )
 	// Get the sampler location
 	userData->baseMapLoc = glGetUniformLocation ( userData->programObject, "texture" );
 
-	glClearColor ( 0.0f, 0.0f, 0.0f, 0.0f );
+	glClearColor ( 0.5f, 0.0f, 0.5f, 0.0f );
 
 	userData->ctrl.lon = 120.0;
 	userData->ctrl.lat = 30.0;
@@ -80,6 +80,25 @@ int Init ( ESContext *esContext )
 	int viewport[4] = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
 	userData->camMgr = new camManager(userData->ctrl,viewport);
 	userData->tileMgr = new tileManager();
+
+
+	//test display
+	tileId id0(0, 0, 0);
+	tileId id1(0, 1, 0);
+	tileId id2(0, 2, 0);
+	tileId id3(0, 3, 0);
+	tileId id4(0, 0, 1);
+	tileId id5(0, 1, 1);
+	tileId id6(0, 2, 1);
+	tileId id7(0, 3, 1);
+	userData->tileMgr->addTile(id0);
+	userData->tileMgr->addTile(id1);
+	userData->tileMgr->addTile(id2);
+	userData->tileMgr->addTile(id3);
+	userData->tileMgr->addTile(id4);
+	userData->tileMgr->addTile(id5);
+	userData->tileMgr->addTile(id6);
+	userData->tileMgr->addTile(id7);
 
 	return TRUE;
 }
@@ -153,23 +172,6 @@ void Draw ( ESContext *esContext )
 	Mat4f* pProjMat = userData->camMgr->getProjMat();
 	glUniformMatrix4fv(userData->uProjMatLoc, 1, GL_FALSE, &(pProjMat[0].col[0].x));
 
-	//test display
-	tileId id0(0,0,0);
-	tileId id1(0,1,0);
-	tileId id2(0,2,0);
-	tileId id3(0,3,0);
-	tileId id4(0,0,1);
-	tileId id5(0,1,1);
-	tileId id6(0,2,1);
-	tileId id7(0,3,1);
-	userData->tileMgr->addTile(id0);
-	userData->tileMgr->addTile(id1);
-	userData->tileMgr->addTile(id2);
-	userData->tileMgr->addTile(id3);
-	userData->tileMgr->addTile(id4);
-	userData->tileMgr->addTile(id5);
-	userData->tileMgr->addTile(id6);
-	userData->tileMgr->addTile(id7);
 
 
 	// Clear the color buffer
@@ -186,7 +188,11 @@ void Draw ( ESContext *esContext )
 
 		auto tile =userData->tileMgr->getTile(idx);
 
-		RendererEle& renderEle = userData->tileMgr->getRederEle(tile->renderIdx);
+		RendererEle& renderEle = userData->tileMgr->getRenderEle(tile.renderIdx);
+		if (renderEle.state != eRenderReady) {
+			userData->tileMgr->UpdateRenderEle(tile);
+			continue;
+		}
 
 
 		glBindTexture(GL_TEXTURE_2D, renderEle.texId);
