@@ -2,12 +2,7 @@
 #include <math.h>
 #include <string>
 #include <assert.h>
-
-
-#ifndef STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#endif
+#include "image_load.h"
 
 cacheEle::cacheEle() {
 	state = eEmpty;
@@ -33,13 +28,16 @@ void cacheEle::genVertex(tileId& id) {
 void cacheEle::loadTexture(tileId& id) {
 	std::string filename = "../../tools/rast/data/" + std::to_string(id.level) + "_" + std::to_string(id.xidx) + "_" + std::to_string(id.yidx) + ".png";
 	int w, h, c;
-	unsigned char *pixels = stbi_load(filename.c_str(), &w, &h, &c, 0);
-	assert(w == IMG_SIZE);
-	assert(h == IMG_SIZE);
-	assert(c == IMG_CHN);
-	memcpy(this->image, pixels, IMG_CHN * IMG_SIZE * IMG_SIZE); 
-	this->state = eReady;
-	stbi_image_free(pixels);
+	unsigned char* pixels = NULL;
+	if(map_load_image(filename, w, h, c, &pixels))
+	{
+		assert(w == IMG_SIZE);
+		assert(h == IMG_SIZE);
+		assert(c == IMG_CHN);
+		memcpy(this->image, pixels, IMG_CHN * IMG_SIZE * IMG_SIZE); 
+		this->state = eReady;
+		map_destroy_image(&pixels);
+	}
 }
 
 dataCache::dataCache() {

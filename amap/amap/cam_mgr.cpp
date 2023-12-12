@@ -10,7 +10,7 @@ camManager::camManager()
 }
 
 camManager::camManager(sCtrlParam& params,int* vp){
-	this->preCtrl = params;
+	//this->preCtrl = params;
 	Mat4f_Identity(&this->view_mat);
 	Mat4f_Identity(&this->proj_mat);
 	Mat4f_Identity(&this->pv_mat);
@@ -84,8 +84,8 @@ int camManager::updateProjMat(sCtrlParam& param) {
 		|| fabs(this->preCtrl.lat - param.lat) > 1e-5
 		|| fabs(this->preCtrl.range - param.range) > 1e-5) {
 		float l, r, b, t;
-		float f = 10.0;
-		float n = 1.0;
+		float f = -5.0;
+		float n = 5.0;
 
 		l = param.lon - param.range / RING_RADIUS * SCREEN_WIDTH / 2;
 		r = param.lon + param.range / RING_RADIUS * SCREEN_WIDTH / 2;

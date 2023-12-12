@@ -1,8 +1,9 @@
 #include "tile_mgr.h"
 #include "esUtil.h"
+#include "image_load.h"
 
 #include <thread>
-
+#include <assert.h>
 
 mapTile& tileManager::getTile(int index) {
 	return this->tileCache[index];
@@ -86,6 +87,10 @@ tileManager::tileManager()
 	unsigned int ibo;*/
 	glGenBuffers(1, &tbo);
 	glGenBuffers(1, &ibo);
+	glGenBuffers(1, &gTBO);
+	glGenBuffers(1, &gIBO);
+	glGenBuffers(1, &gVBO);
+	glGenTextures(1, &gTexId);
 
 	short index[TILE_I_NUM];
 	Vec2f coords[TILE_V_NUM];
@@ -94,7 +99,7 @@ tileManager::tileManager()
 		for (int i = 0; i < GRID_SIZE; i++) {
 			int idx = j*GRID_SIZE + i;
 			coords[idx].x = (float)i / (GRID_SIZE-1);
-			coords[idx].y = (float)j / (GRID_SIZE - 1);
+			coords[idx].y = 1.0-(float)j / (GRID_SIZE - 1);
 		}
 	}
 	glBindBuffer(GL_ARRAY_BUFFER, tbo);
@@ -119,6 +124,40 @@ tileManager::tileManager()
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index), index, GL_STATIC_DRAW);
+
+	Vec2f gVertex[4] = { {-180,-90},{180,-90},{-180,90},{180,90} };
+	glBindBuffer(GL_ARRAY_BUFFER, gVBO);
+	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vec2f), gVertex, GL_STATIC_DRAW);
+	Vec2f gCoord[4] = { {0.0,1.0},{1.0,1.0},{0.0,0.0},{1.0,0.0} };
+	glBindBuffer(GL_ARRAY_BUFFER, gTBO);
+	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vec2f), gCoord, GL_STATIC_DRAW);
+	unsigned short gIndex[4] = { 0,2,1,3 };
+	glBindBuffer(GL_ARRAY_BUFFER, gIBO);
+	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(unsigned short), gIndex, GL_STATIC_DRAW);
+	
+	std::string filename = "views.png";
+	int w, h, c;
+	unsigned char* pixels;
+	if (map_load_image(filename, w, h, c, &pixels)) {
+		assert(c == 4);
+		glBindTexture(GL_TEXTURE_2D, gTexId);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D,
+			0,
+			GL_RGBA,
+			(GLsizei)w,
+			(GLsizei)h,
+			0,
+			GL_RGBA,
+			GL_UNSIGNED_BYTE,
+			(GLvoid*)pixels);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+	map_destroy_image(&pixels);
+
 }
 
 tileManager::~tileManager()

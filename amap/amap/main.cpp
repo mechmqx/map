@@ -9,12 +9,19 @@ typedef struct
 {
 	// Handle to a program object
 	GLuint programObject;
+	GLuint programColor;
 
 	// Attribute locations
 	GLint  positionLoc;
 	GLint  texCoordLoc;
 	GLint  uViewMatLoc;
 	GLint  uProjMatLoc;
+
+	// Attribute locations
+	GLint  pos4colorLoc;
+	GLint  uColorLoc;
+	GLint  uViewMat4colorLoc;
+	GLint  uProjMat4colorLoc;
 
 	// Sampler locations
 	GLint baseMapLoc;
@@ -29,7 +36,7 @@ typedef struct
 
 //static float rangeList[] = {2,5,10,25,50,100,250,400,600,750,1000};
 static float rangeList[] = { 2,5,10,25,50,100,250,400,600,750,1000 };
-static short idx = 5;
+static short idx = 8;
 
 
 ///
@@ -59,8 +66,26 @@ int Init ( ESContext *esContext )
 		"  gl_FragColor = texture2D( texture, v_texCoord );  \n"
 		"}                                                   \n";
 
+	GLbyte vShaderStr_color[] =
+		"attribute vec4 a_position;                   \n"
+		"uniform mat4 viewMat;                        \n"
+		"uniform mat4 projMat;                        \n"
+		"void main()                                  \n"
+		"{                                            \n"
+		"   gl_Position = projMat*viewMat*a_position; \n"
+		"}                                            \n";
+
+	GLbyte fShaderStr_color[] =
+		"precision mediump float;                            \n"
+		"uniform vec4 ucolor;                                \n"
+		"void main()                                         \n"
+		"{                                                   \n"
+		"  gl_FragColor = ucolor;                            \n"
+		"}                                                   \n";
+
 	// Load the shaders and get a linked program object
 	userData->programObject = esLoadProgram ( (const char*)vShaderStr, (const char* )fShaderStr );
+	userData->programColor = esLoadProgram ( (const char*)vShaderStr_color, (const char* )fShaderStr_color);
 
 	// Get the attribute locations
 	userData->positionLoc = glGetAttribLocation ( userData->programObject, "a_position" );
@@ -71,11 +96,17 @@ int Init ( ESContext *esContext )
 	// Get the sampler location
 	userData->baseMapLoc = glGetUniformLocation ( userData->programObject, "texture" );
 
-	glClearColor ( 0.5f, 0.0f, 0.5f, 0.0f );
+	// for color shader
+	userData->pos4colorLoc = glGetAttribLocation(userData->programColor, "a_position");
+	userData->uColorLoc    = glGetUniformLocation(userData->programColor, "ucolor");
+	userData->uViewMat4colorLoc = glGetUniformLocation(userData->programColor, "viewMat");
+	userData->uViewMat4colorLoc = glGetUniformLocation(userData->programColor, "projMat");
+
+	glClearColor ( 0.0f, 0.0f, 0.5f, 0.0f );
 
 	userData->ctrl.lon = 120.0;
 	userData->ctrl.lat = 30.0;
-	userData->ctrl.range = rangeList[idx];
+	userData->ctrl.range = rangeList[idx]/108.0;
 
 	int viewport[4] = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
 	userData->camMgr = new camManager(userData->ctrl,viewport);
@@ -113,22 +144,22 @@ void processKey(ESContext *esContext, unsigned char c, int curX, int curY)
 	switch (c)
 	{
 	case 'a':
-		userData->ctrl.lon += userData->ctrl.range;
+		userData->ctrl.lon += userData->ctrl.range / 2.0;
 		if (userData->ctrl.lon > 180)
 			userData->ctrl.lon -= 360.0;
 		break;
 	case 'd':
-		userData->ctrl.lon -= userData->ctrl.range;
+		userData->ctrl.lon -= userData->ctrl.range / 2.0;
 		if (userData->ctrl.lon < -180)
 			userData->ctrl.lon += 360.0;
 		break;
 	case 'w':
-		userData->ctrl.lat -= userData->ctrl.range;
+		userData->ctrl.lat -= userData->ctrl.range / 2.0;
 		if (userData->ctrl.lat < -90)
 			userData->ctrl.lat = -90.0;
 		break;
 	case 's':
-		userData->ctrl.lat += userData->ctrl.range;
+		userData->ctrl.lat += userData->ctrl.range / 2.0;
 		if (userData->ctrl.lat > 90)
 			userData->ctrl.lat = 90.0;
 		break;
@@ -182,7 +213,13 @@ void Draw ( ESContext *esContext )
 
 	glEnableVertexAttribArray ( userData->positionLoc );
 	glEnableVertexAttribArray ( userData->texCoordLoc );
-
+#if 1
+	glDisable(GL_CULL_FACE);
+#else
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glFrontFace(GL_CW);
+#endif
 	auto& display_list = userData->tileMgr->tileList;
 	for (auto& idx : display_list) {
 
@@ -196,19 +233,68 @@ void Draw ( ESContext *esContext )
 
 
 		glBindTexture(GL_TEXTURE_2D, renderEle.texId);
+		glActiveTexture(GL_TEXTURE0);
 		glUniform1i(userData->baseMapLoc, 0);
 
 		glBindBuffer(GL_ARRAY_BUFFER, renderEle.vbo);
 		glVertexAttribPointer(userData->positionLoc, 2, GL_FLOAT,
-			GL_FALSE, TILE_V_NUM * sizeof(GLfloat), 0);
+			GL_FALSE, 0, 0);
 		// Load the texture coordinate
 		glBindBuffer(GL_ARRAY_BUFFER, userData->tileMgr->tbo);
 		glVertexAttribPointer(userData->texCoordLoc, 2, GL_FLOAT,
-			GL_FALSE, TILE_V_NUM * sizeof(GLfloat), 0);
+			GL_FALSE,0, 0);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, userData->tileMgr->ibo);
-	    glDrawElements ( GL_TRIANGLES, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
+	    glDrawElements (GL_TRIANGLE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
+	    
+	    glDrawElements ( GL_LINE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
 	}
+#if 0
+	glBindTexture(GL_TEXTURE_2D, userData->tileMgr->gTexId);
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(userData->baseMapLoc, 0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, userData->tileMgr->gVBO);
+	glVertexAttribPointer(userData->positionLoc, 2, GL_FLOAT,
+		GL_FALSE, 0, 0);
+	// Load the texture coordinate
+	glBindBuffer(GL_ARRAY_BUFFER, userData->tileMgr->gTBO);
+	glVertexAttribPointer(userData->texCoordLoc, 2, GL_FLOAT,
+		GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, userData->tileMgr->gIBO);
+	glDrawElements(GL_TRIANGLE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
+#endif
+#if 0
+	// Use the program object
+	glUseProgram(userData->programColor);
+
+	glUniformMatrix4fv(userData->uViewMat4colorLoc, 1, GL_FALSE, &(pViewMat[0].col[0].x));
+	glUniformMatrix4fv(userData->uViewMat4colorLoc, 1, GL_FALSE, &(pViewMat[0].col[0].x));
+	GLfloat u_color[4] = {1.0,0.0,0.0,1.0};
+	glUniform4fv(userData->uColorLoc, 1, u_color);
+
+	glEnableVertexAttribArray(userData->pos4colorLoc);
+
+	for (auto& idx : display_list) {
+
+		auto tile = userData->tileMgr->getTile(idx);
+
+		RendererEle& renderEle = userData->tileMgr->getRenderEle(tile.renderIdx);
+		if (renderEle.state != eRenderReady) {
+			//userData->tileMgr->UpdateRenderEle(tile);
+			continue;
+		}
+
+		glBindBuffer(GL_ARRAY_BUFFER, renderEle.vbo);
+		glVertexAttribPointer(userData->pos4colorLoc, 2, GL_FLOAT,
+			GL_FALSE, 0, 0);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, userData->tileMgr->ibo);
+
+		glDrawElements(GL_LINE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
+	}
+#endif
 
 
 	eglSwapBuffers ( esContext->eglDisplay, esContext->eglSurface );
