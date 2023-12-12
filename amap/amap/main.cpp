@@ -110,7 +110,7 @@ int Init ( ESContext *esContext )
 
 	int viewport[4] = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
 	userData->camMgr = new camManager(userData->ctrl,viewport);
-	userData->tileMgr = new tileManager();
+	userData->tileMgr = new tileManager(userData->camMgr);
 
 
 	//test display
@@ -202,8 +202,6 @@ void Draw ( ESContext *esContext )
 	userData->camMgr->updateProjMat(userData->ctrl);
 	Mat4f* pProjMat = userData->camMgr->getProjMat();
 	glUniformMatrix4fv(userData->uProjMatLoc, 1, GL_FALSE, &(pProjMat[0].col[0].x));
-
-
 
 	// Clear the color buffer
 	glClear ( GL_COLOR_BUFFER_BIT );

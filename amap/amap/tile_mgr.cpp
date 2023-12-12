@@ -4,6 +4,7 @@
 
 #include <thread>
 #include <assert.h>
+#include <math.h>
 
 mapTile& tileManager::getTile(int index) {
 	return this->tileCache[index];
@@ -29,6 +30,32 @@ int tileManager::addTile(tileId& id) {
 	this->tileList.push_back(idx);
 
 	return 0;
+}
+
+void tileManager::checkTileTree(int level, mapTile* tile) {
+	// check level
+	if (tile->id.level > level)
+		return;
+	
+	// check visible
+	Vec3d center = { (tile->bbx.l + tile->bbx.r) / 2,(tile->bbx.t + tile->bbx.b) / 2,0.0 };
+	double radius = (tile->bbx.r - tile->bbx.l)*1.415;
+	if (!camMgr->pointInFrumstum(&center, radius))
+		return;
+
+	// TODO: 
+}
+
+void tileManager::updateTileList(sCtrlParam param) {
+	// 1. calculate current level
+	int level = floor(log2f(360.0 / param.range));
+
+	// 2. try add tile to list
+	for (int i = 0; i < 8; i++) {
+		mapTile* pRoot = root[i];
+		
+		checkTileTree(level, pRoot);
+	}
 }
 
 // traverse the data pool and load the data from file system
@@ -72,11 +99,22 @@ RendererEle& tileManager::getRenderEle(short idx) {
 	return ele;
 }
 
+tileManager::tileManager(camManager* camMgr)
+{
+	this->camMgr = camMgr;
+	tileManager();
+}
 tileManager::tileManager()
 {
 	this->dataMgr = new dataCache();
 	this->renderMgr = new renderCache();
 	this->_lru = new LRUCache(TILE_CACHE_SIZE);
+
+	// root tile
+	for (int i = 0; i < 8; i++) {
+		root[i] = new mapTile();
+		root[i]->id = tileId(0, i%4, i/4);
+	}
 
 	// task spawn: data loading thread
 	std::thread t(&tileManager::backgroundProcess, this);
@@ -169,4 +207,8 @@ tileManager::~tileManager()
 	glDeleteBuffers(1, &tbo);
 
 	delete _lru;
+
+	for (int i = 0; i < 8; i++) {
+		delete root[i];
+	}
 }

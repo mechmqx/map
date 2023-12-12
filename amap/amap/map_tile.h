@@ -1,4 +1,5 @@
 #pragma once
+#include "type_define.h"
 
 class tileId
 {
@@ -9,12 +10,16 @@ public:
 	int getKey();
 	tileId();
 	tileId(unsigned short l, unsigned short x, unsigned short y);
+	tileId getChild(short index);
 };
+
 
 class mapTile
 {
 public:
 	tileId id;
+	sAABB bbx;
+	mapTile* child[4];
 
 	// cache data
 	int dataIdx;
@@ -23,6 +28,7 @@ public:
 	int renderIdx;
 
 	mapTile();
+	mapTile(tileId id);
 	~mapTile();
 
 private:

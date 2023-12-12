@@ -3,8 +3,9 @@
 #include "data_cache.h"
 #include "renderer_cache.h"
 #include "map_tile.h"
-
+#include "type_define.h"
 #include "lru_cache.h"
+#include "cam_mgr.h"
 
 #define TILE_CACHE_SIZE (64)
 
@@ -12,9 +13,11 @@ class tileManager
 {
 public:
 	tileManager();
+	tileManager(camManager* camMgr);
 	~tileManager();
 	mapTile& getTile(int index);
 	int addTile(tileId& id);
+	void updateTileList(sCtrlParam param);
 
 	std::vector<int> tileList;
 
@@ -27,12 +30,15 @@ public:
 	unsigned int gVBO;
 	unsigned int gTexId;
 
-
 private:
 	LRUCache *_lru;
 	dataCache *dataMgr;
 	renderCache *renderMgr;
+	camManager* camMgr;
 	int getFreeTile(int key);
 	mapTile tileCache[TILE_CACHE_SIZE];
 	unsigned long backgroundProcess();
+	void checkTileTree(int level, mapTile* tile);
+
+	mapTile* root[8];
 };
