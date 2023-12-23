@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.6)
 
+
+add_definitions(-DUSE_BACKGROUND_TASK=1)
+
 # Include directory
 include_directories(
     ${CMAKE_SOURCE_DIR}

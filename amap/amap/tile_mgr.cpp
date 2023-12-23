@@ -59,6 +59,42 @@ void tileManager::updateTileList(sCtrlParam param) {
 }
 
 // traverse the data pool and load the data from file system
+unsigned long tileManager::foregroundProcess() {
+	static int index = 0;
+	int checkcnt = 0;
+
+	for (int i = 0; i < 4;)
+	{
+		int idx = index + checkcnt;
+		idx %= TILE_CACHE_SIZE;
+		auto& tile = this->tileCache[idx];
+
+		checkcnt++;
+		if (tile.dataIdx < 0 || tile.dataIdx >= DATA_CACHE_SIZE) { continue; }
+
+		// when update a real data, update the i value
+		i++;
+
+		auto& cache = this->dataMgr->cache[tile.dataIdx];
+		cache.lockCache();
+		if (cache.state == eWaitLoading) {
+			cache.state = eLoadVertex;
+			// 1. gen vertex
+			cache.genVertex(tile.id);
+
+			cache.state = eLoadImage;
+			// 2. load image
+			cache.loadTexture(tile.id);
+
+			cache.state = eReady;
+		}
+		cache.unlockCache();
+	}
+	index += checkcnt;
+	index /= TILE_CACHE_SIZE;
+	
+	return 0;
+}
 unsigned long tileManager::backgroundProcess() {
 	for (;;) {
 
@@ -66,10 +102,10 @@ unsigned long tileManager::backgroundProcess() {
 		{
 			auto& tile = this->tileCache[i];
 
-			if (tile.dataIdx == -1) { continue; }
+			if (tile.dataIdx <0 || tile.dataIdx>= DATA_CACHE_SIZE) { continue; }
 
 			auto& cache = this->dataMgr->cache[tile.dataIdx];
-
+			cache.lockCache();
 			if (cache.state == eWaitLoading) {
 				cache.state = eLoadVertex;
 				// 1. gen vertex
@@ -81,6 +117,7 @@ unsigned long tileManager::backgroundProcess() {
 
 				cache.state = eReady;
 			}
+			cache.unlockCache();
 		}
 	}
 	return 0;
@@ -88,10 +125,13 @@ unsigned long tileManager::backgroundProcess() {
 
 void tileManager::UpdateRenderEle(mapTile& tile) {
 	auto& cache = this->dataMgr->cache[tile.dataIdx];
-	if (cache.state != eReady)
+	cache.lockCache();
+	if (cache.state != eReady){
 		return;
+	}
 
 	this->renderMgr->updateEle(tile.renderIdx, cache);
+	cache.unlockCache();
 }
 RendererEle& tileManager::getRenderEle(short idx) {
 	auto& ele = renderMgr->getElement(idx);
@@ -102,13 +142,22 @@ RendererEle& tileManager::getRenderEle(short idx) {
 tileManager::tileManager(camManager* camMgr)
 {
 	this->camMgr = camMgr;
-	tileManager();
+	this->tileManager::tileManager();
 }
 tileManager::tileManager()
 {
 	this->dataMgr = new dataCache();
 	this->renderMgr = new renderCache();
 	this->_lru = new LRUCache(TILE_CACHE_SIZE);
+	if (!this->camMgr) {
+		sCtrlParam ctrl;
+		ctrl.lon = 120.0;
+		ctrl.lat = 30.0;
+		ctrl.range = 400 / 108.0;
+
+		int viewport[4] = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
+		this->camMgr = new camManager(ctrl, viewport);
+	}
 
 	// root tile
 	for (int i = 0; i < 8; i++) {
@@ -116,10 +165,11 @@ tileManager::tileManager()
 		root[i]->id = tileId(0, i%4, i/4);
 	}
 
+#if USE_BACKGROUND_TASK
 	// task spawn: data loading thread
 	std::thread t(&tileManager::backgroundProcess, this);
 	t.detach();
-	
+#endif	
 	/*
 	unsigned int tbo;
 	unsigned int ibo;*/

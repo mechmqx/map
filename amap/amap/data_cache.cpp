@@ -6,8 +6,16 @@
 
 cacheEle::cacheEle() {
 	state = eEmpty;
+	mutex = CreateMutex(NULL, FALSE, NULL);
 }
 cacheEle::~cacheEle() {}
+void cacheEle::lockCache() {
+	WaitForSingleObject(mutex, INFINITE);
+}
+
+void cacheEle::unlockCache() { 
+	ReleaseMutex(mutex); 
+}
 
 void cacheEle::genVertex(tileId& id) {
 	//GRID_SIZE

@@ -29,6 +29,7 @@ public:
 	unsigned int gIBO;
 	unsigned int gVBO;
 	unsigned int gTexId;
+	unsigned long foregroundProcess();
 
 private:
 	LRUCache *_lru;
