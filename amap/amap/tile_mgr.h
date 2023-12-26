@@ -6,6 +6,7 @@
 #include "type_define.h"
 #include "lru_cache.h"
 #include "cam_mgr.h"
+#include <unordered_map>
 
 #define TILE_CACHE_SIZE (64)
 
@@ -40,6 +41,7 @@ private:
 	mapTile tileCache[TILE_CACHE_SIZE];
 	unsigned long backgroundProcess();
 	void checkTileTree(int level, mapTile* tile);
+	std::unordered_map<std::string, int> _list_umap;
 
 	mapTile* root[8];
 };

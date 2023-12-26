@@ -7,7 +7,7 @@ tileId::tileId() {
 	this->yidx = -1;
 }
 
-tileId::tileId(unsigned short l, unsigned short x, unsigned short y) {
+tileId::tileId(short l, short x, short y) {
 
 	this->level = l;
 	this->xidx = x;
@@ -42,6 +42,18 @@ mapTile::mapTile(tileId id) {
 	float step = 90.0 / powf(2.0, id.level);
 	this->bbx.l = -180.0 + step * id.xidx;
 	this->bbx.b = -90+step * id.yidx;
+	this->bbx.r = bbx.l + step;;
+	this->bbx.t = bbx.b + step;
+}
+
+void mapTile::updateBBX() {
+	if (this->id.level == -1) {
+		return;
+	}
+
+	float step = 90.0 / powf(2.0, id.level);
+	this->bbx.l = -180.0 + step * id.xidx;
+	this->bbx.b = -90 + step * id.yidx;
 	this->bbx.r = bbx.l + step;;
 	this->bbx.t = bbx.b + step;
 }

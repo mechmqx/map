@@ -112,7 +112,7 @@ int Init ( ESContext *esContext )
 	userData->camMgr = new camManager(userData->ctrl,viewport);
 	userData->tileMgr = new tileManager(userData->camMgr);
 
-#if 1
+#if 0
 	//test display
 	tileId id0(0, 0, 0);
 	tileId id1(0, 1, 0);
@@ -195,6 +195,9 @@ void Draw ( ESContext *esContext )
 	// update data in foreground
 	userData->tileMgr->foregroundProcess();
 #endif
+
+	userData->tileMgr->updateTileList(userData->ctrl);
+
 	// Set the viewport
 	int* vp = userData->camMgr->getViewport();
 	glViewport (vp[0], vp[1], vp[2], vp[3]);

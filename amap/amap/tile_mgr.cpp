@@ -17,38 +17,92 @@ int tileManager::getFreeTile(int key) {
 // todo: not use this api, use input level; and use frustum clip to judge tile visiblity;
 // use background thread to load data, traverse the data pool;
 int tileManager::addTile(tileId& id) {
+	// 0. check umap
+	auto& key = std::to_string(id.getKey());
+	if (_list_umap.find(key) != _list_umap.end()) {
+		return 0;
+	}
+
 	// 1. get a free tile
 	int idx = getFreeTile(id.getKey());
 
 	// 2. fill tile
 	auto& tile = tileCache[idx];
-	tile.id = id;
-	tile.dataIdx = this->dataMgr->getFreeCacheIndex(id.getKey());
-	tile.renderIdx = this->renderMgr->getFreeCacheIndex(id.getKey());
 
-	// 3.add tile index into list
-	this->tileList.push_back(idx);
+	auto& oldid = tile.id;
 
+	// 2.1 never used
+	if (oldid.level == -1) {
+		tile.id = id;
+		tile.dataIdx = this->dataMgr->getFreeCacheIndex(id.getKey());
+		tile.renderIdx = this->renderMgr->getFreeCacheIndex(id.getKey());
+
+		this->tileList.push_back(idx);
+
+		// add id to umap
+		_list_umap.insert(std::pair<std::string,int>(key, idx));
+
+		return 0;
+	}
+#if 1
+	// 2.2 used but not equal
+	if (oldid.level != id.level || oldid.xidx != id.xidx || oldid.yidx != id.yidx) {
+		// 2.2.1 remove old key
+		_list_umap.erase(std::to_string(oldid.getKey()));
+
+		// 2.2.2 add new
+		tile.id = id;
+		tile.dataIdx = this->dataMgr->getFreeCacheIndex(id.getKey());
+		tile.renderIdx = this->renderMgr->getFreeCacheIndex(id.getKey());
+
+		// 2.2.3 add id to umap
+		_list_umap.insert(std::pair<std::string, int>(key, idx));
+
+		return 0;
+	}
+#endif
 	return 0;
 }
 
 void tileManager::checkTileTree(int level, mapTile* tile) {
-	// check level
+	// 1. check level
 	if (tile->id.level > level)
 		return;
 	
-	// check visible
+	// 2.check visible
 	Vec3d center = { (tile->bbx.l + tile->bbx.r) / 2,(tile->bbx.t + tile->bbx.b) / 2,0.0 };
 	double radius = (tile->bbx.r - tile->bbx.l)*1.415;
 	if (!camMgr->pointInFrumstum(&center, radius))
 		return;
 
-	// TODO: 
+	// 3. add tile to update list
+	addTile(tile->id);
+
+	// 4. recruse child tile
+	for (int i = 0; i < 4; i++) {
+		if (!tile->child[i]) {			
+			tileId id = tile->id.getChild(i);
+
+			// 1. get a free tile
+			int idx = getFreeTile(id.getKey());
+
+			// 2. fill tile
+			tile->child[i] = &tileCache[idx];
+
+			tile->child[i]->id = id;
+			tile->child[i]->updateBBX();
+		}
+
+		checkTileTree(level, tile->child[i]);
+	}
 }
 
 void tileManager::updateTileList(sCtrlParam param) {
 	// 1. calculate current level
 	int level = floor(log2f(360.0 / param.range));
+	if (level > 16) {
+		level = 16;
+	}
 
 	// 2. try add tile to list
 	for (int i = 0; i < 8; i++) {
@@ -161,8 +215,8 @@ tileManager::tileManager()
 
 	// root tile
 	for (int i = 0; i < 8; i++) {
-		root[i] = new mapTile();
-		root[i]->id = tileId(0, i%4, i/4);
+		tileId id = tileId(0, i % 4, i / 4);
+		root[i] = new mapTile(id);
 	}
 
 #if USE_BACKGROUND_TASK

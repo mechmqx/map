@@ -4,12 +4,12 @@
 class tileId
 {
 public:
-	unsigned short level;
-	unsigned short xidx;
-	unsigned short yidx;
+	short level;
+	short xidx;
+	short yidx;
 	int getKey();
 	tileId();
-	tileId(unsigned short l, unsigned short x, unsigned short y);
+	tileId(short l, short x, short y);
 	tileId getChild(short index);
 };
 
@@ -30,6 +30,7 @@ public:
 	mapTile();
 	mapTile(tileId id);
 	~mapTile();
+	void updateBBX();
 
 private:
 
