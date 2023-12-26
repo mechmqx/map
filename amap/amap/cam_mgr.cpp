@@ -70,7 +70,7 @@ int camManager::updateCamera() {
 	this->view_mat.col[1].z = -fo.y;
 	this->view_mat.col[2].z = -fo.z;
 
-	Mat4f_Mul_Mat4f(&view_mat, &view_mat_plane, &pv_mat);
+	Mat4f_Mul_Mat4f(&proj_mat, &view_mat, &pv_mat);
 			
 	return 0;
 }
@@ -104,7 +104,7 @@ int camManager::updateProjMat(sCtrlParam& param) {
 
 		preCtrl = param;
 
-		Mat4f_Mul_Mat4f(&view_mat, &view_mat_plane, &pv_mat);
+		Mat4f_Mul_Mat4f(&proj_mat, &view_mat, &pv_mat);
 	}
 	return 0;
 }

@@ -1,5 +1,6 @@
 #include "map_tile.h"
 #include <math.h>
+#include <assert.h>
 
 tileId::tileId() {
 	this->level = -1;
@@ -8,7 +9,8 @@ tileId::tileId() {
 }
 
 tileId::tileId(short l, short x, short y) {
-
+	assert(x < pow(2, l+2));
+	assert(y < pow(2, l+1));
 	this->level = l;
 	this->xidx = x;
 	this->yidx = y;
@@ -28,6 +30,8 @@ tileId tileId::getChild(short index) {
 	ret.level = level + 1;
 	ret.xidx = xidx * 2 + index % 2;
 	ret.yidx = yidx * 2 + index / 2;
+	assert(ret.xidx < pow(2, ret.level+2));
+	assert(ret.yidx < pow(2, ret.level+1));
 	return ret;
 }
 mapTile::mapTile(tileId id) {

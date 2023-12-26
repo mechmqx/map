@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <list>
+#include <assert.h>
 // Ë«ÏòÁ´±í
 struct DoubleLinkedNode {
     int key, value;
@@ -59,6 +60,9 @@ public:
                 ret = removedNode->value;
                 //erase the old key
                 temp_.erase(removedNode->key);
+
+                removedNode->key = key;    // update key, fix key error
+
                 // set new key
                 temp_[key] = removedNode;
                 // reuse, move to head
@@ -83,6 +87,8 @@ public:
             // update key
             DoubleLinkedNode* node = temp_[key];
             moveTohead(node);
+            auto& iter = temp_.find(key);
+            assert(iter->second->key == node->key);
             return node->value;
         }
     }

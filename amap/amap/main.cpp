@@ -35,8 +35,8 @@ typedef struct
 
 
 //static float rangeList[] = {2,5,10,25,50,100,250,400,600,750,1000};
-static float rangeList[] = { 2,5,10,25,50,100,250,400,600,750,1000 };
-static short idx = 8;
+static float rangeList[] = { 2,5,10,25,50,100,250,400,600,750,1000,2000,5000,7500,12000 };
+static short idx = 10;
 
 
 ///
@@ -167,13 +167,13 @@ void processKey(ESContext *esContext, unsigned char c, int curX, int curY)
 		idx++;
 		if (idx >= sizeof(rangeList) / sizeof(rangeList[0]))
 			idx = sizeof(rangeList) / sizeof(rangeList[0]) - 1;
-		userData->ctrl.range = rangeList[idx];
+		userData->ctrl.range = rangeList[idx]/108.0;
 		break;
 	case 'l':
 		idx--;
 		if (idx <= 0)
 			idx == 0;
-		userData->ctrl.range = rangeList[idx];
+		userData->ctrl.range = rangeList[idx] / 108.0;
 		break;
 	default:
 		break;
@@ -196,8 +196,6 @@ void Draw ( ESContext *esContext )
 	userData->tileMgr->foregroundProcess();
 #endif
 
-	userData->tileMgr->updateTileList(userData->ctrl);
-
 	// Set the viewport
 	int* vp = userData->camMgr->getViewport();
 	glViewport (vp[0], vp[1], vp[2], vp[3]);
@@ -209,6 +207,8 @@ void Draw ( ESContext *esContext )
 	userData->camMgr->updateProjMat(userData->ctrl);
 	Mat4f* pProjMat = userData->camMgr->getProjMat();
 	glUniformMatrix4fv(userData->uProjMatLoc, 1, GL_FALSE, &(pProjMat[0].col[0].x));
+
+	userData->tileMgr->updateTileList(userData->ctrl);
 
 	// Clear the color buffer
 	glClear ( GL_COLOR_BUFFER_BIT );

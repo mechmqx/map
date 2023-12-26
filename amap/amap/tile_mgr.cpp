@@ -17,6 +17,8 @@ int tileManager::getFreeTile(int key) {
 // todo: not use this api, use input level; and use frustum clip to judge tile visiblity;
 // use background thread to load data, traverse the data pool;
 int tileManager::addTile(tileId& id) {
+	if (id.level == 3)
+		printf("");
 	// 0. check umap
 	auto& key = std::to_string(id.getKey());
 	if (_list_umap.find(key) != _list_umap.end()) {
@@ -60,11 +62,25 @@ int tileManager::addTile(tileId& id) {
 
 		return 0;
 	}
+
+	// 2.3 invaliad data index or render index
+	if (tile.dataIdx == -1) {
+		tile.dataIdx = dataMgr->getFreeCacheIndex(id.getKey());
+	}
+	if (tile.renderIdx == -1) {
+		tile.renderIdx = renderMgr->getFreeCacheIndex(id.getKey());
+	}
+
 #endif
 	return 0;
 }
 
+static int depth = 0;
+
 void tileManager::checkTileTree(int level, mapTile* tile) {
+	if (depth > 12) {
+		printf("");
+	}
 	// 1. check level
 	if (tile->id.level > level)
 		return;
@@ -75,6 +91,7 @@ void tileManager::checkTileTree(int level, mapTile* tile) {
 	if (!camMgr->pointInFrumstum(&center, radius))
 		return;
 
+	depth++;
 	// 3. add tile to update list
 	addTile(tile->id);
 
@@ -92,9 +109,11 @@ void tileManager::checkTileTree(int level, mapTile* tile) {
 			tile->child[i]->id = id;
 			tile->child[i]->updateBBX();
 		}
+		assert(tile->id.level + 1 == tile->child[i]->id.level);
 
 		checkTileTree(level, tile->child[i]);
 	}
+	depth--;
 }
 
 void tileManager::updateTileList(sCtrlParam param) {
