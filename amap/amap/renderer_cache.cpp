@@ -4,9 +4,13 @@
 
 static char dummy_data[IMG_SIZE * IMG_SIZE *3] = { 0 };
 
-int renderCache::getFreeCacheIndex(int key) {
-	eIRUState state = eIRUNew;
-	return _lru->get(key, state);
+int renderCache::getFreeCacheIndex(int key, int& oldkey) {
+	sIRUState state = { eIRUFresh,-1 };
+	int idx = _lru->get(key, state);
+	if (state.state == eIRUReuse) {
+		oldkey = state.oldKey;
+	}
+	return idx;
 }
 
 void renderCache::freeCache(short idx) {
@@ -40,7 +44,7 @@ renderCache::renderCache()
 	_lru = new LRUCache(RENDER_CACHE_SIZE);
 
 	// init render pool
-	for (int i = 0; i < RENDER_CACHE_SIZE; i++) {
+	for (int i = 0; i < RENDER_CACHE_SIZE+ CONST_CACHE_SIZE; i++) {
 		auto& ele = cache[i];
 
 		glGenBuffers(1, (GLuint*)&ele.vbo);

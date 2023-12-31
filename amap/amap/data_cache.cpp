@@ -55,10 +55,10 @@ dataCache::dataCache() {
 dataCache::~dataCache() {}
 
 
-int dataCache::getFreeCacheIndex(int key) {
-	eIRUState state = eIRUNew;
+int dataCache::getFreeCacheIndex(int key, int& oldkey) {
+	sIRUState state = { eIRUFresh, -1};
 	int ret = _lru->get(key, state);
-	if (state != eIRUReady) {
+	if (state.state == eIRUReuse) {
 	    cache[ret].state = eWaitLoading;
 	}
 

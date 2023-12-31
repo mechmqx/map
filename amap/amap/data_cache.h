@@ -36,7 +36,7 @@ class dataCache {
 public:
 	dataCache();
 	~dataCache();
-	int getFreeCacheIndex(int key);
+	int getFreeCacheIndex(int key,int& oldkey);
 	void freeCache(short idx);
 	cacheEle cache[DATA_CACHE_SIZE];
 private:

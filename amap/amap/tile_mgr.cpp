@@ -5,76 +5,86 @@
 #include <thread>
 #include <assert.h>
 #include <math.h>
+#include <iostream>
 
 mapTile& tileManager::getTile(int index) {
 	return this->tileCache[index];
 }
+int tileManager::getTileIndex(int key) {
+	return _lru->getindex(key);
+}
 int tileManager::getFreeTile(int key) {
-	eIRUState state = eIRUNew;
-	return this->_lru->get(key, state);
+	sIRUState state = { eIRUFresh,-1 };
+	int idx = this->_lru->get(key, state);
+	if (state.state == eIRUReuse) {
+		// if reuse node, clear old node
+		auto& iter = _list_umap.find(state.oldKey);
+		if (iter != _list_umap.end())
+		{
+			int idx = iter->second;
+			tileCache[idx].renderIdx = -1;
+			tileCache[idx].dataIdx = -1;
+			tileCache[idx].child[0] = NULL;
+			tileCache[idx].child[1] = NULL;
+			tileCache[idx].child[2] = NULL;
+			tileCache[idx].child[3] = NULL;
+
+			_list_umap.erase(state.oldKey);
+		}
+	}
+	return idx;
 }
 
-// todo: not use this api, use input level; and use frustum clip to judge tile visiblity;
-// use background thread to load data, traverse the data pool;
-int tileManager::addTile(tileId& id) {
-	if (id.level == 3)
-		printf("");
+int tileManager::getDataIndex(mapTile tile) {
+	int oldkey = -1;
+	int ret = this->dataMgr->getFreeCacheIndex(tile.id.getKey(), oldkey);
+	if (oldkey != -1) {
+		int idx = this->_lru->getindex(oldkey);
+		if (idx > 0 && idx < TILE_CACHE_SIZE) {
+			tileCache[idx].dataIdx = -1;
+		}
+	}
+	return ret;
+}
+int tileManager::getRenderIndex(mapTile tile) {
+	int oldkey = -1;
+	int ret = this->dataMgr->getFreeCacheIndex(tile.id.getKey(), oldkey);
+	if (oldkey != -1) {
+		int idx = this->_lru->getindex(oldkey);
+		if (idx > 0 && idx < TILE_CACHE_SIZE) {
+			tileCache[idx].renderIdx = -1;
+		}
+	}
+	return ret;
+}
+
+// remove the subtree
+int tileManager::rmTile(mapTile& tile) {
+	// remove
+	return 0;
+}
+int tileManager::addTile(mapTile& tile) {
 	// 0. check umap
-	auto& key = std::to_string(id.getKey());
+	auto key = tile.id.getKey();
 	if (_list_umap.find(key) != _list_umap.end()) {
 		return 0;
 	}
 
-	// 1. get a free tile
-	int idx = getFreeTile(id.getKey());
-
-	// 2. fill tile
-	auto& tile = tileCache[idx];
-
-	auto& oldid = tile.id;
-
-	// 2.1 never used
-	if (oldid.level == -1) {
-		tile.id = id;
-		tile.dataIdx = this->dataMgr->getFreeCacheIndex(id.getKey());
-		tile.renderIdx = this->renderMgr->getFreeCacheIndex(id.getKey());
-
-		this->tileList.push_back(idx);
-
-		// add id to umap
-		_list_umap.insert(std::pair<std::string,int>(key, idx));
-
-		return 0;
+	// 1. get tile idx and push into list
+	int idx = getTileIndex(tile.id.getKey());
+	if (idx == -1) {
+		return -1;
 	}
-#if 1
-	// 2.2 used but not equal
-	if (oldid.level != id.level || oldid.xidx != id.xidx || oldid.yidx != id.yidx) {
-		// 2.2.1 remove old key
-		_list_umap.erase(std::to_string(oldid.getKey()));
+	tileList.push_back(idx);
+	_list_umap.insert(std::pair<int,int>(tile.id.getKey(), idx));
 
-		// 2.2.2 add new
-		tile.id = id;
-		tile.dataIdx = this->dataMgr->getFreeCacheIndex(id.getKey());
-		tile.renderIdx = this->renderMgr->getFreeCacheIndex(id.getKey());
+	// 2. fill tile attribs
+	tile.dataIdx = getDataIndex(tile);
+	tile.renderIdx = getRenderIndex(tile);
+	std::cout << "add(" << tile.id.getStr() << ") to list,tileIdx="<<idx<<" ,dataIdx = " << tile.dataIdx << ", renderIdx = " << tile.renderIdx << std::endl;
 
-		// 2.2.3 add id to umap
-		_list_umap.insert(std::pair<std::string, int>(key, idx));
-
-		return 0;
-	}
-
-	// 2.3 invaliad data index or render index
-	if (tile.dataIdx == -1) {
-		tile.dataIdx = dataMgr->getFreeCacheIndex(id.getKey());
-	}
-	if (tile.renderIdx == -1) {
-		tile.renderIdx = renderMgr->getFreeCacheIndex(id.getKey());
-	}
-
-#endif
 	return 0;
 }
-
 static int depth = 0;
 
 void tileManager::checkTileTree(int level, mapTile* tile) {
@@ -89,11 +99,20 @@ void tileManager::checkTileTree(int level, mapTile* tile) {
 	Vec3d center = { (tile->bbx.l + tile->bbx.r) / 2,(tile->bbx.t + tile->bbx.b) / 2,0.0 };
 	double radius = (tile->bbx.r - tile->bbx.l)*1.415;
 	if (!camMgr->pointInFrumstum(&center, radius))
+	{
+		// remove subtree otherwise level 0
+		if (tile->id.level != 0) {
+		    rmTile(*tile);
+		}
+		// return
 		return;
 
+	}
+
 	depth++;
+
 	// 3. add tile to update list
-	addTile(tile->id);
+	addTile(*tile);
 
 	// 4. recruse child tile
 	for (int i = 0; i < 4; i++) {
@@ -236,6 +255,29 @@ tileManager::tileManager()
 	for (int i = 0; i < 8; i++) {
 		tileId id = tileId(0, i % 4, i / 4);
 		root[i] = new mapTile(id);
+		
+		// 1. get data tem use
+		cacheEle* data = new cacheEle();
+		data->genVertex(id);
+		data->loadTexture(id);
+
+		// 2. get render cache
+		root[i]->renderIdx = RENDER_CACHE_SIZE + 1;
+		RendererEle& ele = renderMgr->getElement(root[i]->renderIdx);
+
+		ele.state = eRenderLoading;
+		glBindBuffer(GL_ARRAY_BUFFER, ele.vbo);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, TILE_V_NUM * 2 * 4, data->vert);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		glBindTexture(GL_TEXTURE_2D, ele.texId);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, (GLsizei)IMG_SIZE,
+			(GLsizei)IMG_SIZE, GL_RGB,
+			GL_UNSIGNED_BYTE, data->image);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glFlush();
+		ele.state = eRenderReady;
+		delete data;
 	}
 
 #if USE_BACKGROUND_TASK

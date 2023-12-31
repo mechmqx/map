@@ -13,10 +13,15 @@ struct DoubleLinkedNode {
 };
 
 typedef enum {
-    eIRUNew,
+    eIRUFresh,
     eIRUReuse,
     eIRUReady,
 }eIRUState;
+
+typedef struct tagIRUState {
+    eIRUState state;
+    int oldKey;
+}sIRUState;
 
 // 每个cache保存的是双向链表的节点, temp[key] = DoubleLinkedNode(key, value)
 // 这样就可以在get的时候, 将节点key, 从双向链表中, 放到最前面
@@ -47,8 +52,17 @@ public:
             size_--;
         }
     }
-
-    int get(int key, eIRUState& state) {
+    int getindex(int key) {
+        if (temp_.count(key) == 0) // no data in cache
+        {
+            return -1;
+        }
+        else {
+            DoubleLinkedNode* node = temp_[key];
+            return node->value;
+        }
+    }
+    int get(int key, sIRUState& state) {
         if (temp_.count(key) == 0) // no data in cache
         {
             int ret = -1;
@@ -56,8 +70,11 @@ public:
             {
                 // remove tile
                 DoubleLinkedNode* removedNode = removeTail();
+
                 // return reused index
                 ret = removedNode->value;
+                state.oldKey = removedNode->key;
+
                 //erase the old key
                 temp_.erase(removedNode->key);
 
@@ -67,6 +84,8 @@ public:
                 temp_[key] = removedNode;
                 // reuse, move to head
                 addToHead(removedNode);
+
+                state.state = eIRUReuse;
             }
             else // not full
             {
@@ -79,6 +98,7 @@ public:
                 // move the node to head
                 addToHead(node);
                 size_++;
+                state.state = eIRUFresh;
             }
             return ret;
         }
@@ -89,6 +109,9 @@ public:
             moveTohead(node);
             auto& iter = temp_.find(key);
             assert(iter->second->key == node->key);
+
+            state.state = eIRUReady;
+
             return node->value;
         }
     }

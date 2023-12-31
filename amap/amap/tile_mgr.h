@@ -17,7 +17,8 @@ public:
 	tileManager(camManager* camMgr);
 	~tileManager();
 	mapTile& getTile(int index);
-	int addTile(tileId& id);
+	int addTile(mapTile& tile);
+	int rmTile(mapTile& tile);
 	void updateTileList(sCtrlParam param);
 
 	std::vector<int> tileList;
@@ -38,10 +39,14 @@ private:
 	renderCache *renderMgr;
 	camManager* camMgr;
 	int getFreeTile(int key);
+	int getTileIndex(int key);
 	mapTile tileCache[TILE_CACHE_SIZE];
 	unsigned long backgroundProcess();
 	void checkTileTree(int level, mapTile* tile);
-	std::unordered_map<std::string, int> _list_umap;
+	std::unordered_map<int, int> _list_umap;
+
+	int getDataIndex(mapTile tile);	
+    int getRenderIndex(mapTile tile);
 
 	mapTile* root[8];
 };

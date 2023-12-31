@@ -15,6 +15,10 @@ tileId::tileId(short l, short x, short y) {
 	this->xidx = x;
 	this->yidx = y;
 }
+
+std::string tileId::getStr() {
+	return std::to_string(level) + "_" + std::to_string(xidx) + "_" + std::to_string(yidx);
+}
 int tileId::getKey() {
 	int _l = (level & 0x000F) << 24;
 	int _x = (xidx & 0x3FFF) << 14;
