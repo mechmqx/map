@@ -137,7 +137,7 @@ void tileManager::checkTileTree(int level, mapTile* tile) {
 
 void tileManager::updateTileList(sCtrlParam param) {
 	// 1. calculate current level
-	int level = floor(log2f(360.0 / param.range));
+	int level = floor(log2f(140.0 / param.range));
 	if (level > 16) {
 		level = 16;
 	}
@@ -212,7 +212,6 @@ unsigned long tileManager::backgroundProcess() {
 			cache.unlockCache();
 		}
 	}
-	return 0;
 }
 
 void tileManager::UpdateRenderEle(mapTile& tile) {

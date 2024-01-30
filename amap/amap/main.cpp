@@ -35,7 +35,8 @@ typedef struct
 
 
 //static float rangeList[] = {2,5,10,25,50,100,250,400,600,750,1000};
-static float rangeList[] = { 2,5,10,25,50,100,250,400,600,750,1000,2000,5000,7500,12000 };
+#define KM2DEG (0.0030864197530864196)
+static float rangeList[] = { 2* KM2DEG,5 * KM2DEG,10 * KM2DEG,25 * KM2DEG,50 * KM2DEG,100 * KM2DEG,250 * KM2DEG,400 * KM2DEG,600 * KM2DEG,750 * KM2DEG,1000 * KM2DEG,2000 * KM2DEG,5000 * KM2DEG,7500 * KM2DEG,12000 * KM2DEG };
 static short idx = 10;
 
 
@@ -106,7 +107,7 @@ int Init ( ESContext *esContext )
 
 	userData->ctrl.lon = 120.0;
 	userData->ctrl.lat = 30.0;
-	userData->ctrl.range = rangeList[idx]/108.0;
+	userData->ctrl.range = rangeList[idx];
 
 	int viewport[4] = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
 	userData->camMgr = new camManager(userData->ctrl,viewport);
@@ -167,19 +168,17 @@ void processKey(ESContext *esContext, unsigned char c, int curX, int curY)
 		idx++;
 		if (idx >= sizeof(rangeList) / sizeof(rangeList[0]))
 			idx = sizeof(rangeList) / sizeof(rangeList[0]) - 1;
-		userData->ctrl.range = rangeList[idx]/108.0;
+		userData->ctrl.range = rangeList[idx];
 		break;
 	case 'l':
 		idx--;
 		if (idx <= 0)
 			idx == 0;
-		userData->ctrl.range = rangeList[idx] / 108.0;
+		userData->ctrl.range = rangeList[idx];
 		break;
 	default:
 		break;
 	}
-
-	userData->ctrl.range;
 
 	return;
 }
