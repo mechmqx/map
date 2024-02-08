@@ -18,7 +18,7 @@ public:
     bool pointInFrumstum(const Vec3d* p, double radius);
 
 private:
-    double camManager::Get_distance_from_frustum_plane(
+    double Get_distance_from_frustum_plane(
         unsigned char r0, unsigned char r1, double sign0, double sign1, const Vec3d* p);
     int            viewport[4];
     Mat4f          view_mat;
