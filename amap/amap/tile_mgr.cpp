@@ -6,16 +6,22 @@
 #include <assert.h>
 #include <math.h>
 #include <iostream>
+#include <unordered_map>
 
 mapTile& tileManager::getTile(int index) {
 	return this->tileCache[index];
 }
-int tileManager::getTileIndex(int key) {
-	return _lru->getindex(key);
+
+int tileManager::getTileIndex(tileId& id) {
+	return _lru->getindex(id.getKey());
 }
-int tileManager::getFreeTile(int key) {
+
+int tileManager::getFreeTile(tileId& id) {
+	int key = id.getKey();
 	sIRUState state = { eIRUFresh,-1 };
 	int idx = this->_lru->get(key, state);
+	assert(idx >= 0);
+	assert(idx < TILE_CACHE_SIZE);
 	if (state.state == eIRUReuse) {
 		// if reuse node, clear old node
 		auto& iter = _list_umap.find(state.oldKey);
@@ -29,164 +35,238 @@ int tileManager::getFreeTile(int key) {
 			tileCache[idx].child[2] = NULL;
 			tileCache[idx].child[3] = NULL;
 
+			tileCache[idx].childVisible = 0;
+			tileCache[idx].id = id;
+			tileCache[idx].updateBBX();
+			tileCache[idx].tilestate = eTileNew;
+
 			_list_umap.erase(state.oldKey);
 		}
 	}
+	else if (state.state == eIRUFresh) {
+		tileCache[idx].id = id;
+		tileCache[idx].updateBBX();
+		tileCache[idx].tilestate = eTileNew;
+	}
+	else {
+		// do nothing for eIRUReady
+	}
+
+	_list_umap.insert(std::unordered_map<int,int>::value_type(key,idx));
+
 	return idx;
 }
 
-int tileManager::getDataIndex(mapTile tile) {
+int tileManager::getDataIndex(mapTile& tile) {
 	int oldkey = -1;
 	int ret = this->dataMgr->getFreeCacheIndex(tile.id.getKey(), oldkey);
 	if (oldkey != -1) {
 		int idx = this->_lru->getindex(oldkey);
 		if (idx > 0 && idx < TILE_CACHE_SIZE) {
 			tileCache[idx].dataIdx = -1;
+
+			std::cout << "Data cache: " << ret << " [" << tileCache[idx].id.getStr() << "->" << tile.id.getStr() << "]" << std::endl;
 		}
+	}
+	else {
+
+		std::cout << "Data cache: " << ret << " [ ------ ->" << tile.id.getStr() << "]" << std::endl;
 	}
 	return ret;
 }
-int tileManager::getRenderIndex(mapTile tile) {
+int tileManager::getRenderIndex(mapTile& tile) {
 	int oldkey = -1;
-	int ret = this->dataMgr->getFreeCacheIndex(tile.id.getKey(), oldkey);
+	int ret = this->renderMgr->getFreeCacheIndex(tile.id.getKey(), oldkey);
 	if (oldkey != -1) {
 		int idx = this->_lru->getindex(oldkey);
 		if (idx > 0 && idx < TILE_CACHE_SIZE) {
 			tileCache[idx].renderIdx = -1;
+			std::cout << "Render cache: "<< ret<<" ["<< tileCache[idx].id.getStr()<<"->"<< tile.id.getStr()<<"]" << std::endl;
 		}
+	}
+	else {
+		std::cout << "Render cache: " << ret << " [ ------ ->" << tile.id.getStr() << "]" << std::endl;
 	}
 	return ret;
 }
 
-// remove the subtree
-int tileManager::rmTile(mapTile& tile) {
-	// remove
-	return 0;
-}
-int tileManager::addTile(mapTile& tile) {
-	// 0. check umap
-	auto key = tile.id.getKey();
-	if (_list_umap.find(key) != _list_umap.end()) {
-		return 0;
-	}
+void tileManager::uploadTile() {
 
-	// 1. get tile idx and push into list
-	int idx = getTileIndex(tile.id.getKey());
-	if (idx == -1) {
-		return -1;
-	}
-	tileList.push_back(idx);
-	_list_umap.insert(std::pair<int,int>(tile.id.getKey(), idx));
-
-	// 2. fill tile attribs
-	tile.dataIdx = getDataIndex(tile);
-	tile.renderIdx = getRenderIndex(tile);
-	std::cout << "add(" << tile.id.getStr() << ") to list,tileIdx="<<idx<<" ,dataIdx = " << tile.dataIdx << ", renderIdx = " << tile.renderIdx << std::endl;
-
-	return 0;
-}
-static int depth = 0;
-
-void tileManager::checkTileTree(int level, mapTile* tile) {
-	if (depth > 12) {
-		printf("");
-	}
-	// 1. check level
-	if (tile->id.level > level)
-		return;
-	
-	// 2.check visible
-	Vec3d center = { (tile->bbx.l + tile->bbx.r) / 2,(tile->bbx.t + tile->bbx.b) / 2,0.0 };
-	double radius = (tile->bbx.r - tile->bbx.l)*1.415;
-	if (!camMgr->pointInFrumstum(&center, radius))
+	//find upload tile
+	for (int i = 0; i < TILE_CACHE_SIZE + ROOT_TILE_CACHE_SIZE; i++)
 	{
-		// remove subtree otherwise level 0
-		if (tile->id.level != 0) {
-		    rmTile(*tile);
+		auto& tile = this->tileCache[i];
+
+		if (tile.dataIdx < 0 || tile.dataIdx >= DATA_CACHE_SIZE + ROOT_TILE_CACHE_SIZE) { continue; }
+
+		if (tile.tilestate == eTileDataReady) {
+			uploadList.push(i);
 		}
-		// return
-		return;
-
 	}
-
-	depth++;
-
-	// 3. add tile to update list
-	addTile(*tile);
-
-	// 4. recruse child tile
-	for (int i = 0; i < 4; i++) {
-		if (!tile->child[i]) {			
-			tileId id = tile->id.getChild(i);
-
-			// 1. get a free tile
-			int idx = getFreeTile(id.getKey());
-
-			// 2. fill tile
-			tile->child[i] = &tileCache[idx];
-
-			tile->child[i]->id = id;
-			tile->child[i]->updateBBX();
+#define UPLOAD_NUM_PER_FRAME (2)
+	int count = 0;
+	while (!uploadList.empty())
+	{
+		int idx = uploadList.front();
+		mapTile& tile = tileCache[idx];
+		if (tile.tilestate == eTileDrawable) {
+			uploadList.pop();
+			continue;
 		}
-		assert(tile->id.level + 1 == tile->child[i]->id.level);
+		if (tile.tilestate != eTileDataReady) {
+			continue;    // todo, now:if tile data not ready, check next frame
+		}
 
-		checkTileTree(level, tile->child[i]);
+		UpdateRenderEle(tile);
+		std::cout << "====== Upload Tile(" << tile.id.getStr() << ") to GPU ======" << std::endl;
+		if (tile.id.xidx == 54 && tile.id.yidx == 20 && tile.id.level == 4) {
+			std::cout << std::endl;
+		}
+
+		tile.tilestate = eTileDrawable;
+
+		uploadList.pop();
+		count++;
+		if (count >= UPLOAD_NUM_PER_FRAME) {
+			break;
+		}
 	}
-	depth--;
+#undef UPLOAD_NUM_PER_FRAME
 }
 
-void tileManager::updateTileList(sCtrlParam param) {
+#define MAX_LEVEL (2)
+void tileManager::updateTileList(sCtrlParam& param) {
+	// 0. clear tileList
+	tileList.clear();
+
 	// 1. calculate current level
 	int level = floor(log2f(140.0 / param.range));
-	if (level > 16) {
-		level = 16;
+	if (level > MAX_LEVEL) {
+		level = MAX_LEVEL;
 	}
 
-	// 2. try add tile to list
+	std::queue<mapTile*> stack;
+	// 2.traverse the root tiles
 	for (int i = 0; i < 8; i++) {
 		mapTile* pRoot = root[i];
-		
-		checkTileTree(level, pRoot);
+		stack.push(pRoot);
 	}
-}
 
-// traverse the data pool and load the data from file system
-unsigned long tileManager::foregroundProcess() {
-	static int index = 0;
-	int checkcnt = 0;
+	// check node
+	while(!stack.empty()) {
+		mapTile* pTile = stack.front();
+		stack.pop();
 
-	for (int i = 0; i < 4;)
-	{
-		int idx = index + checkcnt;
-		idx %= TILE_CACHE_SIZE;
-		auto& tile = this->tileCache[idx];
-
-		checkcnt++;
-		if (tile.dataIdx < 0 || tile.dataIdx >= DATA_CACHE_SIZE) { continue; }
-
-		// when update a real data, update the i value
-		i++;
-
-		auto& cache = this->dataMgr->cache[tile.dataIdx];
-		cache.lockCache();
-		if (cache.state == eWaitLoading) {
-			cache.state = eLoadVertex;
-			// 1. gen vertex
-			cache.genVertex(tile.id);
-
-			cache.state = eLoadImage;
-			// 2. load image
-			cache.loadTexture(tile.id);
-
-			cache.state = eReady;
+		// 3. check visibility
+		Vec3d center = { (pTile->bbx.l + pTile->bbx.r) / 2,(pTile->bbx.t + pTile->bbx.b) / 2,0.0 };
+		double radius = (pTile->bbx.r - pTile->bbx.l) * 1.415;
+		if (!camMgr->pointInFrumstum(&center, radius)) {
+			continue;
 		}
-		cache.unlockCache();
+
+		// 3.1 make child visible flag
+		pTile->childVisible = 0;
+		for (int i = 0; i < 4; i++) {
+			// 3.1.1 create child-for-check
+			tileId childid = pTile->id.getChild(i);
+			auto child = new mapTile(childid);
+			child->updateBBX();
+
+			// 3.1.2 check visible
+			Vec3d center = { (child->bbx.l + child->bbx.r) / 2,(child->bbx.t + child->bbx.b) / 2,0.0 };
+			double radius = (child->bbx.r - child->bbx.l) * 1.415;
+			bool childVisible = camMgr->pointInFrumstum(&center, radius);
+
+			// 3.1.3 if child not empty, check validation
+			if (pTile->child[i] && pTile->child[i]->id != child->id) {
+				pTile->child[i] = 0;
+			}
+
+			delete child;
+
+			// 3.1.4 make the flag
+			pTile->childVisible |= ((childVisible ? 0b1 : 0x0) << i);
+
+		}
+
+		// 4. check max level
+		bool childReady = true;
+		if (pTile->id.level < level) {
+			for (int i = 0; i < 4; i++) {
+				bool childVisible = pTile->childVisible & (0b1<<i);
+
+				// 4.1 child empty, not ready
+				if (childVisible && pTile->child[i] == 0) {
+					childReady = false;
+					break;
+				}
+
+				// 4.2 visible & not ready -> not ready
+				if (childVisible && (pTile->child[i]->tilestate != eTileDrawable)) {
+					childReady = false;
+					break;
+				}
+			}
+		}
+		else { 
+			childReady = false; 
+		}
+
+		// 5. child ready?
+		if (childReady&& pTile->childVisible!=0)   // at least a child is visible, and all children visible are ready
+		{
+			for (int i = 0; i < 4; i++) {
+				bool childVisible = (pTile->childVisible & 0b1 << i);
+				if(childVisible&& pTile->child[i])
+				    stack.push(pTile->child[i]);
+			}
+
+			continue; // process next node
+		}
+		else// child not ready, check current node
+		{
+			if (pTile->tilestate == eTileDrawable) {
+				if (pTile->id.level == 0) {
+					int idx = TILE_CACHE_SIZE + pTile->id.xidx + 4 * pTile->id.yidx;
+					tileList.push_back(idx);
+				}
+				else {
+				    tileList.push_back(_lru->getindex(pTile->id.getKey()));
+				}
+			}
+			else {
+				//if(pTile->childVisible != 0) //all child not visible or not checked yet, to check childs
+				    continue; // if current Tile is not ready, do not traverse child
+			}
+		}
+
+		// 6. check childs
+		if (pTile->id.level < level) {
+			for (int i = 0; i < 4; i++) {
+				if (pTile->childVisible & 0b1 << i)    // if visible
+				{
+					// 6.1 child empty, get child
+					if (pTile->child[i] == 0) {
+						tileId childid = pTile->id.getChild(i);
+						int freeidx = getFreeTile(childid);
+						pTile->child[i] = &tileCache[freeidx];
+					}				
+
+					// 6.2 check status
+					if (pTile->child[i]->dataIdx == -1) {
+						pTile->child[i]->dataIdx = getDataIndex(*pTile->child[i]);
+					}
+
+					if (pTile->child[i]->renderIdx == -1) {
+						pTile->child[i]->renderIdx = getRenderIndex(*pTile->child[i]);
+					}
+				}
+			}
+		}
+		
 	}
-	index += checkcnt;
-	index /= TILE_CACHE_SIZE;
-	
-	return 0;
 }
+
 unsigned long tileManager::backgroundProcess() {
 	for (;;) {
 
@@ -208,6 +288,10 @@ unsigned long tileManager::backgroundProcess() {
 				cache.loadTexture(tile.id);
 
 				cache.state = eReady;
+
+				tile.tilestate = eTileDataReady;
+				std::cout << "----- Load Tile(" << tile.id.getStr() << ") data to Cache -----" << std::endl;
+				
 			}
 			cache.unlockCache();
 		}
@@ -218,6 +302,7 @@ void tileManager::UpdateRenderEle(mapTile& tile) {
 	auto& cache = this->dataMgr->cache[tile.dataIdx];
 	cache.lockCache();
 	if (cache.state != eReady){
+		cache.unlockCache();
 		return;
 	}
 
@@ -250,23 +335,44 @@ tileManager::tileManager()
 		this->camMgr = new camManager(ctrl, viewport);
 	}
 
+	// init tile pool
+	for (int i = 0; i < TILE_CACHE_SIZE+ ROOT_TILE_CACHE_SIZE; i++) {
+		auto& tile = tileCache[i];
+		tile.id = { -1,-1,-1 };
+		tile.dataIdx = -1;
+		tile.renderIdx = -1;
+		tile.tilestate = eTileStateNum;
+		tile.childVisible = 0;
+		tile.bbx.l = 360;
+		tile.bbx.r = -360;
+		tile.bbx.b = 180;
+		tile.bbx.t = -180;
+		tile.child[0] = NULL;
+		tile.child[1] = NULL;
+		tile.child[2] = NULL;
+		tile.child[3] = NULL;
+	}
+
 	// root tile
 	for (int i = 0; i < 8; i++) {
 		tileId id = tileId(0, i % 4, i / 4);
-		root[i] = new mapTile(id);
-		
+		//int idx = getFreeTile(id);
+		root[i] = &tileCache[TILE_CACHE_SIZE + i];
+		root[i]->setId(id);
+				
 		// 1. get data tem use
 		cacheEle* data = new cacheEle();
 		data->genVertex(id);
 		data->loadTexture(id);
 
 		// 2. get render cache
-		root[i]->renderIdx = RENDER_CACHE_SIZE + 1;
+		root[i]->renderIdx = RENDER_CACHE_SIZE + i;
 		RendererEle& ele = renderMgr->getElement(root[i]->renderIdx);
 
 		ele.state = eRenderLoading;
 		glBindBuffer(GL_ARRAY_BUFFER, ele.vbo);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, TILE_V_NUM * 2 * 4, data->vert);
+		int debug = sizeof(Vec2f);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, TILE_V_NUM * sizeof(Vec2f), data->vert);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 		glBindTexture(GL_TEXTURE_2D, ele.texId);
@@ -276,14 +382,14 @@ tileManager::tileManager()
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glFlush();
 		ele.state = eRenderReady;
+		root[i]->tilestate = eTileDrawable;
 		delete data;
 	}
 
-#if USE_BACKGROUND_TASK
 	// task spawn: data loading thread
 	std::thread t(&tileManager::backgroundProcess, this);
 	t.detach();
-#endif	
+
 	/*
 	unsigned int tbo;
 	unsigned int ibo;*/
@@ -294,7 +400,7 @@ tileManager::tileManager()
 	glGenBuffers(1, &gVBO);
 	glGenTextures(1, &gTexId);
 
-	short index[TILE_I_NUM];
+	unsigned short index[TILE_I_NUM];
 	Vec2f coords[TILE_V_NUM];
 	// gen Coords
 	for (int j = 0; j < GRID_SIZE; j++) {
@@ -325,7 +431,7 @@ tileManager::tileManager()
 	}
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index), index, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, TILE_I_NUM*sizeof(unsigned short), index, GL_STATIC_DRAW);
 
 	Vec2f gVertex[4] = { {-180,-90},{180,-90},{-180,90},{180,90} };
 	glBindBuffer(GL_ARRAY_BUFFER, gVBO);
@@ -371,8 +477,4 @@ tileManager::~tileManager()
 	glDeleteBuffers(1, &tbo);
 
 	delete _lru;
-
-	for (int i = 0; i < 8; i++) {
-		delete root[i];
-	}
 }

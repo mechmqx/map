@@ -1,4 +1,6 @@
+#include <windows.h>
 #include <stdlib.h>
+#include <iostream>
 #include "esUtil.h"
 #include "type_define.h"
 #include "cam_mgr.h"
@@ -45,6 +47,7 @@ static short idx = 10;
 //
 int Init ( ESContext *esContext )
 {
+	std::cout << "MAP in =========>>" << std::endl;
 	UserData *userData = (UserData*)esContext->userData;
 	GLbyte vShaderStr[] =  
 		"attribute vec4 a_position;                   \n"
@@ -113,25 +116,6 @@ int Init ( ESContext *esContext )
 	userData->camMgr = new camManager(userData->ctrl,viewport);
 	userData->tileMgr = new tileManager(userData->camMgr);
 
-#if 0
-	//test display
-	tileId id0(0, 0, 0);
-	tileId id1(0, 1, 0);
-	tileId id2(0, 2, 0);
-	tileId id3(0, 3, 0);
-	tileId id4(0, 0, 1);
-	tileId id5(0, 1, 1);
-	tileId id6(0, 2, 1);
-	tileId id7(0, 3, 1);
-	userData->tileMgr->addTile(id0);
-	userData->tileMgr->addTile(id1);
-	userData->tileMgr->addTile(id2);
-	userData->tileMgr->addTile(id3);
-	userData->tileMgr->addTile(id4);
-	userData->tileMgr->addTile(id5);
-	userData->tileMgr->addTile(id6);
-	userData->tileMgr->addTile(id7);
-#endif
 	return TRUE;
 }
 
@@ -190,11 +174,6 @@ void Draw ( ESContext *esContext )
 {
 	UserData *userData = (UserData * )esContext->userData;
 
-#if !USE_BACKGROUND_TASK
-	// update data in foreground
-	userData->tileMgr->foregroundProcess();
-#endif
-
 	// Set the viewport
 	int* vp = userData->camMgr->getViewport();
 	glViewport (vp[0], vp[1], vp[2], vp[3]);
@@ -207,6 +186,7 @@ void Draw ( ESContext *esContext )
 	Mat4f* pProjMat = userData->camMgr->getProjMat();
 	glUniformMatrix4fv(userData->uProjMatLoc, 1, GL_FALSE, &(pProjMat[0].col[0].x));
 
+	userData->tileMgr->uploadTile();
 	userData->tileMgr->updateTileList(userData->ctrl);
 
 	// Clear the color buffer
@@ -224,17 +204,16 @@ void Draw ( ESContext *esContext )
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CW);
 #endif
+#if 1
 	auto& display_list = userData->tileMgr->tileList;
 	for (auto& idx : display_list) {
 
-		auto tile =userData->tileMgr->getTile(idx);
+		auto& tile =userData->tileMgr->getTile(idx);
 
 		RendererEle& renderEle = userData->tileMgr->getRenderEle(tile.renderIdx);
 		if (renderEle.state != eRenderReady) {
-			userData->tileMgr->UpdateRenderEle(tile);
 			continue;
 		}
-
 
 		glBindTexture(GL_TEXTURE_2D, renderEle.texId);
 		glActiveTexture(GL_TEXTURE0);
@@ -251,8 +230,9 @@ void Draw ( ESContext *esContext )
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, userData->tileMgr->ibo);
 	    glDrawElements (GL_TRIANGLE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
 	    
-	    glDrawElements ( GL_LINE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
+	    //glDrawElements ( GL_LINE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
 	}
+#endif
 #if 0
 	glBindTexture(GL_TEXTURE_2D, userData->tileMgr->gTexId);
 	glActiveTexture(GL_TEXTURE0);
@@ -269,37 +249,6 @@ void Draw ( ESContext *esContext )
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, userData->tileMgr->gIBO);
 	glDrawElements(GL_TRIANGLE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
 #endif
-#if 0
-	// Use the program object
-	glUseProgram(userData->programColor);
-
-	glUniformMatrix4fv(userData->uViewMat4colorLoc, 1, GL_FALSE, &(pViewMat[0].col[0].x));
-	glUniformMatrix4fv(userData->uViewMat4colorLoc, 1, GL_FALSE, &(pViewMat[0].col[0].x));
-	GLfloat u_color[4] = {1.0,0.0,0.0,1.0};
-	glUniform4fv(userData->uColorLoc, 1, u_color);
-
-	glEnableVertexAttribArray(userData->pos4colorLoc);
-
-	for (auto& idx : display_list) {
-
-		auto tile = userData->tileMgr->getTile(idx);
-
-		RendererEle& renderEle = userData->tileMgr->getRenderEle(tile.renderIdx);
-		if (renderEle.state != eRenderReady) {
-			//userData->tileMgr->UpdateRenderEle(tile);
-			continue;
-		}
-
-		glBindBuffer(GL_ARRAY_BUFFER, renderEle.vbo);
-		glVertexAttribPointer(userData->pos4colorLoc, 2, GL_FLOAT,
-			GL_FALSE, 0, 0);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, userData->tileMgr->ibo);
-
-		glDrawElements(GL_LINE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
-	}
-#endif
-
 
 	eglSwapBuffers ( esContext->eglDisplay, esContext->eglSurface );
 }
@@ -322,6 +271,9 @@ int main ( int argc, char *argv[] )
 {
 	ESContext esContext;
 	UserData  userData;
+
+	AllocConsole();
+	freopen("CONOUT$", "w", stdout);
 
 	esInitContext ( &esContext );
 	esContext.userData = &userData;

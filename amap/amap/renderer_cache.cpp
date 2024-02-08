@@ -4,12 +4,13 @@
 
 static char dummy_data[IMG_SIZE * IMG_SIZE *3] = { 0 };
 
-int renderCache::getFreeCacheIndex(int key, int& oldkey) {
+int renderCache::getFreeCacheIndex(int key, int& oldkey) 
+{
 	sIRUState state = { eIRUFresh,-1 };
 	int idx = _lru->get(key, state);
-	if (state.state == eIRUReuse) {
-		oldkey = state.oldKey;
-	}
+
+	oldkey = state.oldKey;
+	
 	return idx;
 }
 

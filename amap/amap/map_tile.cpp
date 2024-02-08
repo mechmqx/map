@@ -38,8 +38,13 @@ tileId tileId::getChild(short index) {
 	assert(ret.yidx < pow(2, ret.level+1));
 	return ret;
 }
-mapTile::mapTile(tileId id) {
+mapTile::mapTile(tileId& id) {
+	setId(id);
+}
+
+int mapTile::setId(tileId& id) {
 	this->id = id;
+	this->updateBBX();
 	this->dataIdx = -1;
 	this->renderIdx = -1;
 	this->child[0] = 0;
@@ -49,9 +54,13 @@ mapTile::mapTile(tileId id) {
 
 	float step = 90.0 / powf(2.0, id.level);
 	this->bbx.l = -180.0 + step * id.xidx;
-	this->bbx.b = -90+step * id.yidx;
+	this->bbx.b = -90 + step * id.yidx;
 	this->bbx.r = bbx.l + step;;
 	this->bbx.t = bbx.b + step;
+
+	this->childVisible = 0;
+	this->tilestate = eTileNew;
+	return 0;
 }
 
 void mapTile::updateBBX() {
@@ -80,6 +89,9 @@ mapTile::mapTile()
 	this->bbx.b = -360;
 	this->bbx.r = -360;
 	this->bbx.t = -360;
+
+	this->childVisible = 0;
+	this->tilestate = eTileNew;
 }
 
 mapTile::~mapTile()

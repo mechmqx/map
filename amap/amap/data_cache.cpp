@@ -58,9 +58,11 @@ dataCache::~dataCache() {}
 int dataCache::getFreeCacheIndex(int key, int& oldkey) {
 	sIRUState state = { eIRUFresh, -1};
 	int ret = _lru->get(key, state);
-	if (state.state == eIRUReuse) {
+	if (state.state != eIRUReady) {
 	    cache[ret].state = eWaitLoading;
 	}
+
+	oldkey = state.oldKey;
 
 	return ret;
 }

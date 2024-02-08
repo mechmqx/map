@@ -6,7 +6,7 @@
 #include "lru_cache.h"
 #include <Windows.h>
 
-#define DATA_CACHE_SIZE (128)
+#define DATA_CACHE_SIZE (48)
 
 enum eCacheState{
 	eEmpty,

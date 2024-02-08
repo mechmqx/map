@@ -2,7 +2,7 @@
 #include "lru_cache.h"
 #include "data_cache.h"
 
-#define RENDER_CACHE_SIZE (128)
+#define RENDER_CACHE_SIZE (48)
 #define CONST_CACHE_SIZE (8)
 
 enum eRendererState {
