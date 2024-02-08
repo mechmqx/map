@@ -62,7 +62,7 @@ int tileManager::getDataIndex(mapTile& tile) {
 	int ret = this->dataMgr->getFreeCacheIndex(tile.id.getKey(), oldkey);
 	if (oldkey != -1) {
 		int idx = this->_lru->getindex(oldkey);
-		if (idx > 0 && idx < TILE_CACHE_SIZE) {
+		if (idx >= 0 && idx < TILE_CACHE_SIZE) {
 			tileCache[idx].dataIdx = -1;
 
 			std::cout << "Data cache: " << ret << " [" << tileCache[idx].id.getStr() << "->" << tile.id.getStr() << "]" << std::endl;
@@ -79,7 +79,7 @@ int tileManager::getRenderIndex(mapTile& tile) {
 	int ret = this->renderMgr->getFreeCacheIndex(tile.id.getKey(), oldkey);
 	if (oldkey != -1) {
 		int idx = this->_lru->getindex(oldkey);
-		if (idx > 0 && idx < TILE_CACHE_SIZE) {
+		if (idx >= 0 && idx < TILE_CACHE_SIZE) {
 			tileCache[idx].renderIdx = -1;
 			std::cout << "Render cache: "<< ret<<" ["<< tileCache[idx].id.getStr()<<"->"<< tile.id.getStr()<<"]" << std::endl;
 		}
