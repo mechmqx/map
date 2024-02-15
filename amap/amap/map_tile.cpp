@@ -2,44 +2,40 @@
 #include <math.h>
 #include <assert.h>
 
-tileId::tileId() {
-	this->level = -1;
-	this->xidx = -1;
-	this->yidx = -1;
-}
+#include <iostream>
 
-tileId::tileId(short l, short x, short y) {
-	assert(x < pow(2, l+2));
-	assert(y < pow(2, l+1));
-	this->level = l;
-	this->xidx = x;
-	this->yidx = y;
-}
-
-std::string tileId::getStr() {
-	return std::to_string(level) + "_" + std::to_string(xidx) + "_" + std::to_string(yidx);
-}
-int tileId::getKey() {
-	int _l = (level & 0x000F) << 24;
-	int _x = (xidx & 0x3FFF) << 14;
-	int _y = (yidx & 0x3FFF) ;
-	return  _l | _x | _y;
-}
-
-tileId tileId::getChild(short index) {
-	tileId ret;
-	if (index < 0 || index >= 4) {
-		return ret;
-	}
-	ret.level = level + 1;
-	ret.xidx = xidx * 2 + index % 2;
-	ret.yidx = yidx * 2 + index / 2;
-	assert(ret.xidx < pow(2, ret.level+2));
-	assert(ret.yidx < pow(2, ret.level+1));
-	return ret;
-}
 mapTile::mapTile(tileId& id) {
 	setId(id);
+	mutex = CreateMutex(NULL, FALSE, NULL);
+}
+
+void mapTile::setState(eTileState state) {
+	WaitForSingleObject(mutex, INFINITE);
+
+	this->tilestate = state;
+
+	std::cout << "tile(" << id.getStr() << ") set ";
+	switch (state)
+	{
+	case eTileNew:
+		std::cout << "eTileNew";
+		break;
+	case eTileDataReady:
+		std::cout << "eTileDataReady";
+		break;
+	case eTileDrawable:
+		std::cout << "eTileDrawable";
+		break;
+	case eTileStateNum:
+		std::cout << "eTileStateNum";
+		break;
+	default:
+		std::cout << "INVALID STATE";
+		break;
+	}
+	std::cout<< std::endl;
+
+	ReleaseMutex(mutex);
 }
 
 int mapTile::setId(tileId& id) {
@@ -92,6 +88,7 @@ mapTile::mapTile()
 
 	this->childVisible = 0;
 	this->tilestate = eTileNew;
+	mutex = CreateMutex(NULL, FALSE, NULL);
 }
 
 mapTile::~mapTile()
@@ -100,4 +97,5 @@ mapTile::~mapTile()
 		if (child[i])
 			delete child[i];
 	}
+	CloseHandle(mutex);
 }

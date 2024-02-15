@@ -13,18 +13,17 @@ mapTile& tileManager::getTile(int index) {
 }
 
 int tileManager::getTileIndex(tileId& id) {
-	return _lru->getindex(id.getKey());
+	return _lru->getindex(id);
 }
 
 int tileManager::getFreeTile(tileId& id) {
-	int key = id.getKey();
-	sIRUState state = { eIRUFresh,-1 };
-	int idx = this->_lru->get(key, state);
+	sIRUState state = { eIRUFresh,tileId() };
+	int idx = this->_lru->get(id, state);
 	assert(idx >= 0);
 	assert(idx < TILE_CACHE_SIZE);
 	if (state.state == eIRUReuse) {
 		// if reuse node, clear old node
-		auto& iter = _list_umap.find(state.oldKey);
+		auto& iter = _list_umap.find(state.oldId.getKey());
 		if (iter != _list_umap.end())
 		{
 			int idx = iter->second;
@@ -38,62 +37,75 @@ int tileManager::getFreeTile(tileId& id) {
 			tileCache[idx].childVisible = 0;
 			tileCache[idx].id = id;
 			tileCache[idx].updateBBX();
-			tileCache[idx].tilestate = eTileNew;
+			tileCache[idx].setState(eTileNew);
 
-			_list_umap.erase(state.oldKey);
+			_list_umap.erase(state.oldId.getKey());
 		}
 	}
 	else if (state.state == eIRUFresh) {
 		tileCache[idx].id = id;
 		tileCache[idx].updateBBX();
-		tileCache[idx].tilestate = eTileNew;
+		tileCache[idx].setState(eTileNew);
 	}
 	else {
 		// do nothing for eIRUReady
 	}
 
-	_list_umap.insert(std::unordered_map<int,int>::value_type(key,idx));
+	_list_umap.insert(std::unordered_map<int,int>::value_type(id.getKey(),idx));
 
 	return idx;
 }
 
 int tileManager::getDataIndex(mapTile& tile) {
-	int oldkey = -1;
-	int ret = this->dataMgr->getFreeCacheIndex(tile.id.getKey(), oldkey);
-	if (oldkey != -1) {
-		int idx = this->_lru->getindex(oldkey);
-		if (idx >= 0 && idx < TILE_CACHE_SIZE) {
-			tileCache[idx].dataIdx = -1;
+	tileId oldid;
+	int ret = this->dataMgr->getFreeCacheIndex(tile.id, oldid);
+	if (oldid.isValid()&&oldid!=tile.id) {
+		int idx = this->_lru->getindex(oldid);
+		assert(idx >= 0 && idx < TILE_CACHE_SIZE);
+		
+		tileCache[idx].dataIdx = -1;
 
-			std::cout << "Data cache: " << ret << " [" << tileCache[idx].id.getStr() << "->" << tile.id.getStr() << "]" << std::endl;
-		}
+		std::cout << "Data cache: " << ret << " [" << tileCache[idx].id.getStr() << "->" << tile.id.getStr() << "]" << std::endl;
+		std::cout << "Reset Tile[ " << idx << " ] 's dataIdx" << std::endl;		
 	}
-	else {
+	else if(oldid != tile.id){
 
 		std::cout << "Data cache: " << ret << " [ ------ ->" << tile.id.getStr() << "]" << std::endl;
 	}
+	else {
+		// do nothing, get the same index as before
+	}
+
+	if (ret == DATA_CACHE_SIZE-1) {
+		int a = 0;
+	}
 	return ret;
 }
-int tileManager::getRenderIndex(mapTile& tile) {
-	int oldkey = -1;
-	int ret = this->renderMgr->getFreeCacheIndex(tile.id.getKey(), oldkey);
-	if (oldkey != -1) {
-		int idx = this->_lru->getindex(oldkey);
-		if (idx >= 0 && idx < TILE_CACHE_SIZE) {
-			tileCache[idx].renderIdx = -1;
-			std::cout << "Render cache: "<< ret<<" ["<< tileCache[idx].id.getStr()<<"->"<< tile.id.getStr()<<"]" << std::endl;
 
-			// fix the status error
-			if (tileCache[idx].dataIdx != -1) {
-				tileCache[idx].tilestate = eTileDataReady;
-			}
-			else {
-				tileCache[idx].tilestate = eTileNew;
-			}
+int tileManager::getRenderIndex(mapTile& tile) {
+	tileId oldid;
+	int ret = this->renderMgr->getFreeCacheIndex(tile.id, oldid);
+	if (oldid.isValid()&& oldid != tile.id) {
+		int idx = this->_lru->getindex(oldid);
+		assert(idx >= 0 && idx < TILE_CACHE_SIZE);
+		
+		tileCache[idx].renderIdx = -1;
+		std::cout << "Render cache: "<< ret<<" ["<< tileCache[idx].id.getStr()<<"->"<< tile.id.getStr()<<"]" << std::endl;
+		std::cout << "Reset Tile[ " << idx << " ] 's reader Idx" << std::endl;
+
+		// fix the status error
+		if (tileCache[idx].dataIdx != -1) {
+			tileCache[idx].setState(eTileDataReady);
 		}
+		else {
+			tileCache[idx].setState(eTileNew);
+		}		
 	}
-	else {
+	else if(oldid != tile.id){
 		std::cout << "Render cache: " << ret << " [ ------ ->" << tile.id.getStr() << "]" << std::endl;
+	}
+	if (ret == RENDER_CACHE_SIZE-1) {
+		int a = 0;
 	}
 	return ret;
 }
@@ -132,7 +144,7 @@ void tileManager::uploadTile() {
 			std::cout << std::endl;
 		}
 
-		tile.tilestate = eTileDrawable;
+		tile.setState(eTileDrawable);
 
 		uploadList.pop();
 		count++;
@@ -141,6 +153,12 @@ void tileManager::uploadTile() {
 		}
 	}
 #undef UPLOAD_NUM_PER_FRAME
+}
+
+bool tileManager::checkTileVisible(mapTile& tile) {
+	Vec3d center = { (tile.bbx.l + tile.bbx.r) / 2,(tile.bbx.t + tile.bbx.b) / 2,0.0 };
+	double radius = (tile.bbx.r - tile.bbx.l) * 1.415;
+	return camMgr->pointInFrumstum(&center, radius);
 }
 
 #define MAX_LEVEL (3)
@@ -167,27 +185,23 @@ void tileManager::updateTileList(sCtrlParam& param) {
 		stack.pop();
 
 		// 3. check visibility
-		Vec3d center = { (pTile->bbx.l + pTile->bbx.r) / 2,(pTile->bbx.t + pTile->bbx.b) / 2,0.0 };
-		double radius = (pTile->bbx.r - pTile->bbx.l) * 1.415;
-		if (!camMgr->pointInFrumstum(&center, radius)) {
+		if (!checkTileVisible(*pTile))
 			continue;
-		}
 
 		// 3.1 make child visible flag
 		pTile->childVisible = 0;
 		for (int i = 0; i < 4; i++) {
 			// 3.1.1 create child-for-check
-			tileId childid = pTile->id.getChild(i);
+			tileId&& childid = pTile->id.getChild(i);
 			auto child = new mapTile(childid);
 			child->updateBBX();
 
 			// 3.1.2 check visible
-			Vec3d center = { (child->bbx.l + child->bbx.r) / 2,(child->bbx.t + child->bbx.b) / 2,0.0 };
-			double radius = (child->bbx.r - child->bbx.l) * 1.415;
-			bool childVisible = camMgr->pointInFrumstum(&center, radius);
+			bool childVisible = checkTileVisible(*child);
 
 			// 3.1.3 if child not empty, check validation
-			if (pTile->child[i] && pTile->child[i]->id != child->id) {
+			if (pTile->child[i] && pTile->child[i]->id != child->id) 
+			{
 				pTile->child[i] = 0;
 			}
 
@@ -240,7 +254,7 @@ void tileManager::updateTileList(sCtrlParam& param) {
 					tileList.push_back(idx);
 				}
 				else {
-				    tileList.push_back(_lru->getindex(pTile->id.getKey()));
+				    tileList.push_back(_lru->getindex(pTile->id));
 				}
 			}
 			else {
@@ -256,25 +270,14 @@ void tileManager::updateTileList(sCtrlParam& param) {
 				{
 					// 6.1 child empty, get child
 					if (pTile->child[i] == 0) {
-						tileId childid = pTile->id.getChild(i);
+						tileId&& childid = pTile->id.getChild(i);
 						int freeidx = getFreeTile(childid);
 						pTile->child[i] = &tileCache[freeidx];
 					}				
 
 					// 6.2 check status
-					if (pTile->child[i]->dataIdx != -1) {
-						if(pTile->child[i]->tilestate == eTileNew)
-						    std::cout << std::endl;
-					}else{
-						pTile->child[i]->dataIdx = getDataIndex(*pTile->child[i]);
-					}
-
-					if (pTile->child[i]->renderIdx != -1) {
-						if (pTile->child[i]->tilestate == eTileNew)
-						    std::cout << std::endl;
-					}else{
-						pTile->child[i]->renderIdx = getRenderIndex(*pTile->child[i]);
-					}
+					pTile->child[i]->dataIdx = getDataIndex(*pTile->child[i]);
+					pTile->child[i]->renderIdx = getRenderIndex(*pTile->child[i]);
 				}
 			}
 		}
@@ -304,8 +307,8 @@ unsigned long tileManager::backgroundProcess() {
 
 				cache.state = eReady;
 
-				tile.tilestate = eTileDataReady;
-				std::cout << "----- Load Tile(" << tile.id.getStr() << ") data to Cache -----" << std::endl;
+				tile.setState(eTileDataReady);
+				std::cout << "----- Load Tile["<<i <<"](" << tile.id.getStr() << ") data to Cache("<< tile.dataIdx <<") -----" << std::endl;
 				
 			}
 			cache.unlockCache();

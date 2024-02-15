@@ -14,6 +14,7 @@
 
 class tileManager
 {
+	bool checkTileVisible(mapTile& tile);
 public:
 	tileManager();
 	tileManager(camManager* camMgr);

@@ -8,7 +8,9 @@ cacheEle::cacheEle() {
 	state = eEmpty;
 	mutex = CreateMutex(NULL, FALSE, NULL);
 }
-cacheEle::~cacheEle() {}
+cacheEle::~cacheEle() {
+	CloseHandle(mutex);
+}
 void cacheEle::lockCache() {
 	WaitForSingleObject(mutex, INFINITE);
 }
@@ -43,7 +45,6 @@ void cacheEle::loadTexture(tileId& id) {
 		assert(h == IMG_SIZE);
 		assert(c == IMG_CHN);
 		memcpy(this->image, pixels, IMG_CHN * IMG_SIZE * IMG_SIZE); 
-		this->state = eReady;
 		map_destroy_image(&pixels);
 	}
 }
@@ -55,14 +56,16 @@ dataCache::dataCache() {
 dataCache::~dataCache() {}
 
 
-int dataCache::getFreeCacheIndex(int key, int& oldkey) {
-	sIRUState state = { eIRUFresh, -1};
-	int ret = _lru->get(key, state);
+int dataCache::getFreeCacheIndex(tileId& id, tileId& oldid) {
+	sIRUState state = { eIRUFresh, tileId()};
+	int ret = _lru->get(id, state);
 	if (state.state != eIRUReady) {
+		cache[ret].lockCache();
 	    cache[ret].state = eWaitLoading;
+		cache[ret].unlockCache();
 	}
-
-	oldkey = state.oldKey;
+	
+	oldid = state.oldId;
 
 	return ret;
 }

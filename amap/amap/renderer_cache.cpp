@@ -4,12 +4,12 @@
 
 static char dummy_data[IMG_SIZE * IMG_SIZE *3] = { 0 };
 
-int renderCache::getFreeCacheIndex(int key, int& oldkey) 
+int renderCache::getFreeCacheIndex(tileId& id, tileId& oldid)
 {
-	sIRUState state = { eIRUFresh,-1 };
-	int idx = _lru->get(key, state);
+	sIRUState state = { eIRUFresh,tileId() };
+	int idx = _lru->get(id, state);
 
-	oldkey = state.oldKey;
+	oldid = state.oldId;
 	
 	return idx;
 }

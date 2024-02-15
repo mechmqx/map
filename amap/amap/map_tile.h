@@ -1,6 +1,7 @@
 #pragma once
-#include "type_define.h"
+#include "tile_id.h"
 #include <string>
+#include <Windows.h>
 
 typedef enum tagTileState {
 	eTileNew,
@@ -17,37 +18,9 @@ typedef enum tagChildVisble {
 	eChild11Visble = 0b00001000,
 }eChildVisble;
 
-class tileId
-{
-public:
-	short level;
-	short xidx;
-	short yidx;
-	int getKey();
-	std::string getStr();
-	tileId();
-	tileId(short l, short x, short y);
-	tileId getChild(short index);
-
-	bool operator==(const tileId& other)
-	{
-		if (level != other.level || xidx != other.xidx || yidx != other.yidx) {
-			return false;
-		}
-		return true;
-	}
-	bool operator!=(const tileId& other)
-	{
-		if (level != other.level || xidx != other.xidx || yidx != other.yidx) {
-			return true;
-		}
-		return false;
-	}
-};
-
-
 class mapTile
 {
+	HANDLE mutex;
 public:
 	tileId id;
 	sAABB bbx;
@@ -68,6 +41,8 @@ public:
 	~mapTile();
 	void updateBBX();
 	int setId(tileId& id);
+
+	void setState(eTileState state);
 
 private:
 

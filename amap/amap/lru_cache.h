@@ -3,8 +3,11 @@
 #include <unordered_map>
 #include <list>
 #include <assert.h>
+#include "tile_id.h"
+
 // 双向链表
 struct DoubleLinkedNode {
+    tileId id;
     int key, value;
     DoubleLinkedNode* prev;
     DoubleLinkedNode* next;
@@ -20,7 +23,7 @@ typedef enum {
 
 typedef struct tagIRUState {
     eIRUState state;
-    int oldKey;
+    tileId oldId;
 }sIRUState;
 
 // 每个cache保存的是双向链表的节点, temp[key] = DoubleLinkedNode(key, value)
@@ -52,18 +55,19 @@ public:
             size_--;
         }
     }
-    int getindex(int key) {
-        if (temp_.count(key) == 0) // no data in cache
+    int getindex(tileId& id) {
+        if (temp_.count(id.getKey()) == 0) // no data in cache
         {
             return -1;
         }
         else {
-            DoubleLinkedNode* node = temp_[key];
+            DoubleLinkedNode* node = temp_[id.getKey()];
+            assert(id == node->id);
             return node->value;
         }
     }
-    int get(int key, sIRUState& state) {
-        if (temp_.count(key) == 0) // no data in cache
+    int get(tileId& id, sIRUState& state) {
+        if (temp_.count(id.getKey()) == 0) // no data in cache
         {
             int ret = -1;
             if (size_ == capacity_) // full
@@ -73,15 +77,16 @@ public:
 
                 // return reused index
                 ret = removedNode->value;
-                state.oldKey = removedNode->key;
+                state.oldId = removedNode->id;
 
                 //erase the old key
                 temp_.erase(removedNode->key);
 
-                removedNode->key = key;    // update key, fix key error
+                removedNode->key = id.getKey();    // update key, fix key error
+                removedNode->id = id;              // update id, fix key error
 
                 // set new key
-                temp_[key] = removedNode;
+                temp_[id.getKey()] = removedNode;
                 // reuse, move to head
                 addToHead(removedNode);
 
@@ -90,11 +95,13 @@ public:
             else // not full
             {
                 // build a new node
-                DoubleLinkedNode* node = new DoubleLinkedNode(key, size_);
+                DoubleLinkedNode* node = new DoubleLinkedNode(id.getKey(), size_);
+                node->id = id;
+
                 // return index
                 ret = size_;
                 // add node to hashtable
-                temp_[key] = node;
+                temp_[id.getKey()] = node;
                 // move the node to head
                 addToHead(node);
                 size_++;
@@ -105,21 +112,23 @@ public:
         else     // has data in cache
         {
             // update key
-            DoubleLinkedNode* node = temp_[key];
+            DoubleLinkedNode* node = temp_[id.getKey()];
+            assert(id == node->id);
+
             moveTohead(node);
-            auto& iter = temp_.find(key);
-            assert(iter->second->key == node->key);
 
             state.state = eIRUReady;
+            state.oldId = node->id;
 
             return node->value;
         }
     }
 
-    void put(int key, int value) {
-        if (temp_.count(key) == 0) {
-            DoubleLinkedNode* node = new DoubleLinkedNode(key, value);
-            temp_[key] = node;
+    void put(tileId id, int value) {
+        if (temp_.count(id.getKey()) == 0) {
+            DoubleLinkedNode* node = new DoubleLinkedNode(id.getKey(), value);
+            node->id = id;
+            temp_[id.getKey()] = node;
             addToHead(node);
             size_++;
             if (size_ > capacity_) {
@@ -130,7 +139,7 @@ public:
             }
         }
         else {
-            DoubleLinkedNode* node = temp_[key];
+            DoubleLinkedNode* node = temp_[id.getKey()];
             node->value = value;
             moveTohead(node);
         }
