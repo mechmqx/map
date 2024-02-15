@@ -31,14 +31,14 @@ public:
 
 	bool operator==(const tileId& other)
 	{
-		if (level != other.level || xidx != other.xidx && yidx != other.yidx) {
+		if (level != other.level || xidx != other.xidx || yidx != other.yidx) {
 			return false;
 		}
 		return true;
 	}
 	bool operator!=(const tileId& other)
 	{
-		if (level != other.level || xidx != other.xidx && yidx != other.yidx) {
+		if (level != other.level || xidx != other.xidx || yidx != other.yidx) {
 			return true;
 		}
 		return false;

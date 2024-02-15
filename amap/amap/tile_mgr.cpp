@@ -82,6 +82,14 @@ int tileManager::getRenderIndex(mapTile& tile) {
 		if (idx >= 0 && idx < TILE_CACHE_SIZE) {
 			tileCache[idx].renderIdx = -1;
 			std::cout << "Render cache: "<< ret<<" ["<< tileCache[idx].id.getStr()<<"->"<< tile.id.getStr()<<"]" << std::endl;
+
+			// fix the status error
+			if (tileCache[idx].dataIdx != -1) {
+				tileCache[idx].tilestate = eTileDataReady;
+			}
+			else {
+				tileCache[idx].tilestate = eTileNew;
+			}
 		}
 	}
 	else {
@@ -114,6 +122,7 @@ void tileManager::uploadTile() {
 			continue;
 		}
 		if (tile.tilestate != eTileDataReady) {
+			uploadList.pop();    // rm status error tiles
 			continue;    // todo, now:if tile data not ready, check next frame
 		}
 
@@ -134,7 +143,7 @@ void tileManager::uploadTile() {
 #undef UPLOAD_NUM_PER_FRAME
 }
 
-#define MAX_LEVEL (2)
+#define MAX_LEVEL (3)
 void tileManager::updateTileList(sCtrlParam& param) {
 	// 0. clear tileList
 	tileList.clear();
@@ -253,11 +262,17 @@ void tileManager::updateTileList(sCtrlParam& param) {
 					}				
 
 					// 6.2 check status
-					if (pTile->child[i]->dataIdx == -1) {
+					if (pTile->child[i]->dataIdx != -1) {
+						if(pTile->child[i]->tilestate == eTileNew)
+						    std::cout << std::endl;
+					}else{
 						pTile->child[i]->dataIdx = getDataIndex(*pTile->child[i]);
 					}
 
-					if (pTile->child[i]->renderIdx == -1) {
+					if (pTile->child[i]->renderIdx != -1) {
+						if (pTile->child[i]->tilestate == eTileNew)
+						    std::cout << std::endl;
+					}else{
 						pTile->child[i]->renderIdx = getRenderIndex(*pTile->child[i]);
 					}
 				}
