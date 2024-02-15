@@ -39,19 +39,24 @@ int tileManager::getFreeTile(tileId& id) {
 			tileCache[idx].updateBBX();
 			tileCache[idx].setState(eTileNew);
 
+			std::cout << "tile cache[" << idx << "] " << state.oldId.getStr() << "-->" << id.getStr() << std::endl;
+
 			_list_umap.erase(state.oldId.getKey());
 		}
+
+		_list_umap.insert(std::unordered_map<int, int>::value_type(id.getKey(), idx));
 	}
 	else if (state.state == eIRUFresh) {
 		tileCache[idx].id = id;
 		tileCache[idx].updateBBX();
 		tileCache[idx].setState(eTileNew);
+		std::cout << "tile cache[" << idx << "] ------ -->" << id.getStr() << std::endl;
+
+		_list_umap.insert(std::unordered_map<int, int>::value_type(id.getKey(), idx));
 	}
 	else {
 		// do nothing for eIRUReady
 	}
-
-	_list_umap.insert(std::unordered_map<int,int>::value_type(id.getKey(),idx));
 
 	return idx;
 }
@@ -61,12 +66,13 @@ int tileManager::getDataIndex(mapTile& tile) {
 	int ret = this->dataMgr->getFreeCacheIndex(tile.id, oldid);
 	if (oldid.isValid()&&oldid!=tile.id) {
 		int idx = this->_lru->getindex(oldid);
-		assert(idx >= 0 && idx < TILE_CACHE_SIZE);
-		
-		tileCache[idx].dataIdx = -1;
 
-		std::cout << "Data cache: " << ret << " [" << tileCache[idx].id.getStr() << "->" << tile.id.getStr() << "]" << std::endl;
-		std::cout << "Reset Tile[ " << idx << " ] 's dataIdx" << std::endl;		
+		if (idx >= 0 && idx < TILE_CACHE_SIZE) {		
+			tileCache[idx].dataIdx = -1;
+
+			std::cout << "Data cache: " << ret << " [" << tileCache[idx].id.getStr() << "->" << tile.id.getStr() << "]" << std::endl;
+			std::cout << "Reset Tile[ " << idx << " ] 's dataIdx" << std::endl;	
+		}	
 	}
 	else if(oldid != tile.id){
 
@@ -87,11 +93,11 @@ int tileManager::getRenderIndex(mapTile& tile) {
 	int ret = this->renderMgr->getFreeCacheIndex(tile.id, oldid);
 	if (oldid.isValid()&& oldid != tile.id) {
 		int idx = this->_lru->getindex(oldid);
-		assert(idx >= 0 && idx < TILE_CACHE_SIZE);
-		
-		tileCache[idx].renderIdx = -1;
-		std::cout << "Render cache: "<< ret<<" ["<< tileCache[idx].id.getStr()<<"->"<< tile.id.getStr()<<"]" << std::endl;
-		std::cout << "Reset Tile[ " << idx << " ] 's reader Idx" << std::endl;
+		if (idx >= 0 && idx < TILE_CACHE_SIZE) {
+			tileCache[idx].renderIdx = -1;
+			std::cout << "Render cache: "<< ret<<" ["<< tileCache[idx].id.getStr()<<"->"<< tile.id.getStr()<<"]" << std::endl;
+			std::cout << "Reset Tile[ " << idx << " ] 's reader Idx" << std::endl;
+		}
 
 		// fix the status error
 		if (tileCache[idx].dataIdx != -1) {
@@ -308,7 +314,7 @@ unsigned long tileManager::backgroundProcess() {
 				cache.state = eReady;
 
 				tile.setState(eTileDataReady);
-				std::cout << "----- Load Tile["<<i <<"](" << tile.id.getStr() << ") data to Cache("<< tile.dataIdx <<") -----" << std::endl;
+				//std::cout << "----- Load Tile["<<i <<"](" << tile.id.getStr() << ") data to Cache("<< tile.dataIdx <<") -----" << std::endl;
 				
 			}
 			cache.unlockCache();
@@ -369,6 +375,7 @@ tileManager::tileManager()
 		tile.child[1] = NULL;
 		tile.child[2] = NULL;
 		tile.child[3] = NULL;
+		tile.father_idx = -1;
 	}
 
 	// root tile
@@ -377,6 +384,7 @@ tileManager::tileManager()
 		//int idx = getFreeTile(id);
 		root[i] = &tileCache[TILE_CACHE_SIZE + i];
 		root[i]->setId(id);
+		root[i]->father_idx = -1;
 				
 		// 1. get data tem use
 		cacheEle* data = new cacheEle();

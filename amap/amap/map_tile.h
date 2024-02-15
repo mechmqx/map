@@ -25,6 +25,7 @@ public:
 	tileId id;
 	sAABB bbx;
 	mapTile* child[4];
+	int father_idx;
 
 	char childVisible;
 

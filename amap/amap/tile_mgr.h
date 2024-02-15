@@ -9,7 +9,7 @@
 #include "cam_mgr.h"
 #include <unordered_map>
 
-#define TILE_CACHE_SIZE (64)
+#define TILE_CACHE_SIZE (128)
 #define ROOT_TILE_CACHE_SIZE (8)
 
 class tileManager

@@ -80,6 +80,7 @@ mapTile::mapTile()
 	this->child[1] = 0;
 	this->child[2] = 0;
 	this->child[3] = 0;
+	this->father_idx = -1;
 
 	this->bbx.l = -360;
 	this->bbx.b = -360;

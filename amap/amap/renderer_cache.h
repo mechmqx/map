@@ -3,7 +3,7 @@
 #include "data_cache.h"
 #include "tile_id.h"
 
-#define RENDER_CACHE_SIZE (48)
+#define RENDER_CACHE_SIZE (128)
 #define CONST_CACHE_SIZE (8)
 
 enum eRendererState {

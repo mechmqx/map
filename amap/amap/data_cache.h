@@ -7,7 +7,7 @@
 #include "tile_id.h"
 #include <Windows.h>
 
-#define DATA_CACHE_SIZE (48)
+#define DATA_CACHE_SIZE (128)
 
 enum eCacheState{
 	eEmpty,
