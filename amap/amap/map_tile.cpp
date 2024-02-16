@@ -10,6 +10,9 @@ mapTile::mapTile(tileId& id) {
 }
 
 void mapTile::setState(eTileState state) {
+	if (!this->id.isValid()||id.xidx<0||id.yidx<0) {
+		int a = 0;
+	}
 	WaitForSingleObject(mutex, INFINITE);
 
 	this->tilestate = state;

@@ -1,6 +1,10 @@
 #include "config.h"
 #include "renderer_cache.h"
+#if USE_OPENGL_MODEN
+#include "glad.h"
+#else
 #include "esUtil.h"
+#endif
 
 static char dummy_data[IMG_SIZE * IMG_SIZE *3] = { 0 };
 

@@ -62,6 +62,9 @@ public:
         }
         else {
             DoubleLinkedNode* node = temp_[id.getKey()];
+            if (id != node->id) {
+                int a = 0;
+            }
             assert(id == node->id);
             return node->value;
         }
@@ -113,6 +116,9 @@ public:
         {
             // update key
             DoubleLinkedNode* node = temp_[id.getKey()];
+            if (id != node->id) {
+                int a = 0;
+            }
             assert(id == node->id);
 
             moveTohead(node);
