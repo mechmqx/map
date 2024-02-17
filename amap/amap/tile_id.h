@@ -22,6 +22,7 @@ public:
 	tileId(short l, short x, short y);
 	tileId getChild(short index);
 	bool isValid();
+	bool checkValid();
 
 	bool operator==(const tileId& other)
 	{

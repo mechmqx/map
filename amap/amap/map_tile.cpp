@@ -10,7 +10,7 @@ mapTile::mapTile(tileId& id) {
 }
 
 void mapTile::setState(eTileState state) {
-	if (!this->id.isValid()||id.xidx<0||id.yidx<0) {
+	if (!id.checkValid()) {
 		int a = 0;
 	}
 	WaitForSingleObject(mutex, INFINITE);
@@ -22,6 +22,9 @@ void mapTile::setState(eTileState state) {
 	{
 	case eTileNew:
 		std::cout << "eTileNew";
+		break;
+	case eTileDataLoading:
+		std::cout << "eTileDataLoading";
 		break;
 	case eTileDataReady:
 		std::cout << "eTileDataReady";
@@ -42,23 +45,19 @@ void mapTile::setState(eTileState state) {
 }
 
 int mapTile::setId(tileId& id) {
-	this->id = id;
-	this->updateBBX();
-	this->dataIdx = -1;
-	this->renderIdx = -1;
-	this->child[0] = 0;
-	this->child[1] = 0;
-	this->child[2] = 0;
-	this->child[3] = 0;
+	if (this->id != id) {
+		this->id = id;
+		this->updateBBX();
+		this->dataIdx = -1;
+		this->renderIdx = -1;
+		this->child[0] = 0;
+		this->child[1] = 0;
+		this->child[2] = 0;
+		this->child[3] = 0;
 
-	float step = 90.0 / powf(2.0, id.level);
-	this->bbx.l = -180.0 + step * id.xidx;
-	this->bbx.b = -90 + step * id.yidx;
-	this->bbx.r = bbx.l + step;;
-	this->bbx.t = bbx.b + step;
-
-	this->childVisible = 0;
-	this->tilestate = eTileNew;
+		this->childVisible = 0;
+		this->tilestate = eTileNew;
+	}
 	return 0;
 }
 
@@ -84,6 +83,7 @@ mapTile::mapTile()
 	this->child[2] = 0;
 	this->child[3] = 0;
 	this->father_idx = -1;
+	this->cur_idx = -1;
 
 	this->bbx.l = -360;
 	this->bbx.b = -360;

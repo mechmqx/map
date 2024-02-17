@@ -18,6 +18,10 @@ int renderCache::getFreeCacheIndex(tileId& id, tileId& oldid)
 	return idx;
 }
 
+void renderCache::updateCacheIndex(tileId& id) {
+	_lru->update(id);
+}
+
 void renderCache::freeCache(short idx) {
 
 }

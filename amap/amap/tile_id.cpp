@@ -6,10 +6,7 @@ void tileId::setId(short l, short x, short y) {
 	this->level = l;
 	this->xidx = x;
 	this->yidx = y;
-	if (l<0 || x<0 || y<0 || l>MAX_LEVEL || x>MAX_INDEX || y>MAX_INDEX || x >= pow(2, l + 2) || y >= pow(2, l + 1))
-		bValid = false;
-	else
-		bValid = true;
+	checkValid();
 }
 
 tileId::tileId() {
@@ -35,6 +32,30 @@ int tileId::getKey() {
 	return  _l | _x | _y;
 }
 
+bool tileId::checkValid() {
+	if (level < 0) {
+		bValid = false;
+		return false;
+	}
+	if (xidx < 0) {
+		bValid = false;
+		return false;
+	}
+	if (yidx < 0) {
+		bValid = false;
+		return false;
+	}
+	if (xidx >= pow(2,this->level + 2)) {
+		bValid = false;
+		return false;
+	}
+	if (yidx >= pow(2, this->level + 1)) {
+		bValid = false;
+		return false;
+	}
+	bValid = true;
+	return true;
+}
 bool tileId::isValid() {
 	return bValid;
 }

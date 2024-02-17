@@ -26,6 +26,7 @@ public:
 	renderCache();
 	~renderCache();
 
+	void updateCacheIndex(tileId& id);
 	int getFreeCacheIndex(tileId& id, tileId& oldid);
 	void freeCache(short idx);
 

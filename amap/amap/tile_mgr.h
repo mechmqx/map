@@ -40,12 +40,12 @@ private:
 	dataCache *dataMgr;
 	renderCache *renderMgr;
 	camManager* camMgr;
-	std::unordered_map<int, int> _list_umap;
 	mapTile tileCache[TILE_CACHE_SIZE+ ROOT_TILE_CACHE_SIZE];
 	mapTile* root[8];
 
 	int getFreeTile(tileId& id);
 	int getTileIndex(tileId& id);
+	void updateTileIndex(tileId& id);
 	unsigned long backgroundProcess();
 	void UpdateRenderEle(mapTile& tile);
 

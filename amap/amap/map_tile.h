@@ -5,6 +5,7 @@
 
 typedef enum tagTileState {
 	eTileNew,
+	eTileDataLoading,
 	eTileDataReady,
 	eTileDrawable,
 	eTileStateNum
@@ -21,15 +22,16 @@ typedef enum tagChildVisble {
 class mapTile
 {
 	HANDLE mutex;
-public:
+	eTileState tilestate;
 	tileId id;
+public:
 	sAABB bbx;
 	mapTile* child[4];
 	int father_idx;
+	int cur_idx;
 
 	char childVisible;
 
-	eTileState tilestate;
 
 	// cache data
 	int dataIdx;
@@ -42,8 +44,10 @@ public:
 	~mapTile();
 	void updateBBX();
 	int setId(tileId& id);
+	tileId& getId() { return id; };
 
 	void setState(eTileState state);
+	const eTileState& getState() { return tilestate; };
 
 private:
 

@@ -56,6 +56,10 @@ dataCache::dataCache() {
 dataCache::~dataCache() {}
 
 
+void dataCache::updateCacheIndex(tileId& id)
+{
+	_lru->update(id);
+}
 int dataCache::getFreeCacheIndex(tileId& id, tileId& oldid) {
 	sIRUState state = { eIRUFresh, tileId()};
 	int ret = _lru->get(id, state);

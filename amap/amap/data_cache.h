@@ -38,6 +38,7 @@ class dataCache {
 public:
 	dataCache();
 	~dataCache();
+	void updateCacheIndex(tileId& id);
 	int getFreeCacheIndex(tileId& id, tileId& oldid);
 	void freeCache(short idx);
 	cacheEle cache[DATA_CACHE_SIZE];

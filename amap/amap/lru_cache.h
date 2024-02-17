@@ -69,6 +69,19 @@ public:
             return node->value;
         }
     }
+
+    void update(tileId& id) {
+        if (temp_.count(id.getKey()) == 0)
+        {
+            // no data in cache, do nothing
+        }
+        else {
+            // has data in cache
+            DoubleLinkedNode* node = temp_[id.getKey()];
+            moveTohead(node);
+        }
+    }
+
     int get(tileId& id, sIRUState& state) {
         if (temp_.count(id.getKey()) == 0) // no data in cache
         {
