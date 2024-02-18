@@ -30,7 +30,7 @@ typedef struct
 
 	sCtrlParam ctrl;
 	
-	camManager* camMgr;
+	camManager* _camMgr;
 	tileManager* tileMgr;
 
 } UserData;
@@ -113,8 +113,8 @@ int Init ( ESContext *esContext )
 	userData->ctrl.range = rangeList[idx];
 
 	int viewport[4] = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
-	userData->camMgr = new camManager(userData->ctrl,viewport);
-	userData->tileMgr = new tileManager(userData->camMgr);
+	userData->_camMgr = new camManager(userData->ctrl,viewport);
+	userData->tileMgr = new tileManager(userData->_camMgr);
 
 	return TRUE;
 }
@@ -175,15 +175,15 @@ void Draw ( ESContext *esContext )
 	UserData *userData = (UserData * )esContext->userData;
 
 	// Set the viewport
-	int* vp = userData->camMgr->getViewport();
+	int* vp = userData->_camMgr->getViewport();
 	glViewport (vp[0], vp[1], vp[2], vp[3]);
 
-	userData->camMgr->updateCamera();
-	Mat4f* pViewMat = userData->camMgr->getViewMat();
+	userData->_camMgr->updateCamera();
+	Mat4f* pViewMat = userData->_camMgr->getViewMat();
 	glUniformMatrix4fv(userData->uViewMatLoc, 1, GL_FALSE, &(pViewMat[0].col[0].x));
 
-	userData->camMgr->updateProjMat(userData->ctrl);
-	Mat4f* pProjMat = userData->camMgr->getProjMat();
+	userData->_camMgr->updateProjMat(userData->ctrl);
+	Mat4f* pProjMat = userData->_camMgr->getProjMat();
 	glUniformMatrix4fv(userData->uProjMatLoc, 1, GL_FALSE, &(pProjMat[0].col[0].x));
 
 	userData->tileMgr->uploadTile();

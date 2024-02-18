@@ -13,7 +13,7 @@
 #include <unordered_map>
 
 mapTile& tileManager::getTile(int index) {
-	return this->tileCache[index];
+	return this->_tileCache[index];
 }
 
 int tileManager::_getTileIndex(tileId& id) {
@@ -22,8 +22,8 @@ int tileManager::_getTileIndex(tileId& id) {
 
 void tileManager::_updateTileIndex(tileId& id) {
 	_lru->update(id);
-	this->dataMgr->updateCacheIndex(id);
-	this->renderMgr->updateCacheIndex(id);
+	this->_dataMgr->updateCacheIndex(id);
+	this->_renderMgr->updateCacheIndex(id);
 }
 
 int tileManager::_getFreeTile(tileId& id) {
@@ -32,7 +32,7 @@ int tileManager::_getFreeTile(tileId& id) {
 	do {
 
 	    idx = this->_lru->get(id, state);
-	} while (tileCache[idx].getState() == eTileDataLoading);
+	} while (_tileCache[idx].getState() == eTileDataLoading);
 
 	if (idx < 0 || idx >= TILE_CACHE_SIZE) {
 		int a = 0;
@@ -40,21 +40,21 @@ int tileManager::_getFreeTile(tileId& id) {
 	assert(idx >= 0);
 	assert(idx < TILE_CACHE_SIZE);
 
-	tileCache[idx].setId(id);
+	_tileCache[idx].setId(id);
 
 	return idx;
 }
 
 int tileManager::_getDataIndex(mapTile& tile) {
 	tileId oldid;
-	int ret = this->dataMgr->getFreeCacheIndex(tile.getId(), oldid);
+	int ret = this->_dataMgr->getFreeCacheIndex(tile.getId(), oldid);
 	if (oldid.isValid()&&oldid!=tile.getId()) {
 		int idx = this->_lru->getindex(oldid);
 
 		if (idx >= 0 && idx < TILE_CACHE_SIZE) {		
-			tileCache[idx].dataIdx = -1;
+			_tileCache[idx].dataIdx = -1;
 
-			std::cout << "Data cache[" << ret << "] " << tileCache[idx].getId().getStr() << "->" << tile.getId().getStr() << std::endl;
+			std::cout << "Data cache[" << ret << "] " << _tileCache[idx].getId().getStr() << "->" << tile.getId().getStr() << std::endl;
 			std::cout << "Reset Tile[" << idx << "] 's dataIdx" << std::endl;	
 		}	
 	}
@@ -77,20 +77,20 @@ int tileManager::_getDataIndex(mapTile& tile) {
 
 int tileManager::_getRenderIndex(mapTile& tile) {
 	tileId oldid;
-	int ret = this->renderMgr->getFreeCacheIndex(tile.getId(), oldid);
+	int ret = this->_renderMgr->getFreeCacheIndex(tile.getId(), oldid);
 	if (oldid.isValid()&& oldid != tile.getId()) {
 		int idx = this->_lru->getindex(oldid);
 		if (idx >= 0 && idx < TILE_CACHE_SIZE) {
-			tileCache[idx].renderIdx = -1;
-			std::cout << "Render cache["<< ret<<"] "<< tileCache[idx].getId().getStr()<<"->"<< tile.getId().getStr() << std::endl;
+			_tileCache[idx].renderIdx = -1;
+			std::cout << "Render cache["<< ret<<"] "<< _tileCache[idx].getId().getStr()<<"->"<< tile.getId().getStr() << std::endl;
 			std::cout << "Reset Tile[" << idx << "] 's render Idx" << std::endl;
 
 			// fix the status error
-			if (tileCache[idx].dataIdx != -1) {
-				tileCache[idx].setState(eTileDataReady);
+			if (_tileCache[idx].dataIdx != -1) {
+				_tileCache[idx].setState(eTileDataReady);
 			}
 			else {
-				tileCache[idx].setState(eTileNew);
+				_tileCache[idx].setState(eTileNew);
 			}		
 
 		}
@@ -113,26 +113,26 @@ void tileManager::uploadTile() {
 	//find upload tile
 	for (int i = 0; i < TILE_CACHE_SIZE + ROOT_TILE_CACHE_SIZE; i++)
 	{
-		auto& tile = this->tileCache[i];
+		auto& tile = this->_tileCache[i];
 
 		if (tile.dataIdx < 0 || tile.dataIdx >= DATA_CACHE_SIZE + ROOT_TILE_CACHE_SIZE) { continue; }
 
 		if (tile.getState() == eTileDataReady) {
-			uploadList.push(i);
+			_uploadList.push(i);
 		}
 	}
 #define UPLOAD_NUM_PER_FRAME (2)
 	int count = 0;
-	while (!uploadList.empty())
+	while (!_uploadList.empty())
 	{
-		int idx = uploadList.front();
-		mapTile& tile = tileCache[idx];
+		int idx = _uploadList.front();
+		mapTile& tile = _tileCache[idx];
 		if (tile.getState() == eTileDrawable) {
-			uploadList.pop();
+			_uploadList.pop();
 			continue;
 		}
 		if (tile.getState() != eTileDataReady) {
-			uploadList.pop();    // rm status error tiles
+			_uploadList.pop();    // rm status error tiles
 			continue;    // todo, now:if tile data not ready, check next frame
 		}
 
@@ -144,7 +144,7 @@ void tileManager::uploadTile() {
 
 		tile.setState(eTileDrawable);
 
-		uploadList.pop();
+		_uploadList.pop();
 		count++;
 		if (count >= UPLOAD_NUM_PER_FRAME) {
 			break;
@@ -156,7 +156,7 @@ void tileManager::uploadTile() {
 bool tileManager::_checkTileVisible(mapTile& tile) {
 	Vec3d center = { (tile.bbx.l + tile.bbx.r) / 2,(tile.bbx.t + tile.bbx.b) / 2,0.0 };
 	double radius = (tile.bbx.r - tile.bbx.l) * 1.415;
-	return camMgr->pointInFrumstum(&center, radius);
+	return _camMgr->pointInFrumstum(&center, radius);
 }
 
 #define MAX_LEVEL (8)
@@ -173,7 +173,7 @@ void tileManager::updateTileList(sCtrlParam& param) {
 	std::queue<mapTile*> stack;
 	// 2.traverse the root tiles
 	for (int i = 0; i < 8; i++) {
-		mapTile* pRoot = root[i];
+		mapTile* pRoot = _root[i];
 		stack.push(pRoot);
 	}
 
@@ -274,7 +274,7 @@ void tileManager::updateTileList(sCtrlParam& param) {
 					{
 						tileId&& childid = pTile->getId().getChild(i);
 						int freeidx = _getFreeTile(childid);
-						pTile->child[i] = &tileCache[freeidx];
+						pTile->child[i] = &_tileCache[freeidx];
 						pTile->child[i]->father_idx = pTile->cur_idx;
 					}				
 
@@ -293,11 +293,11 @@ unsigned long tileManager::_backgroundProcess() {
 
 		for (int i = 0; i < TILE_CACHE_SIZE; i++)
 		{
-			auto& tile = this->tileCache[i];
+			auto& tile = this->_tileCache[i];
 
 			if (tile.dataIdx <0 || tile.dataIdx>= DATA_CACHE_SIZE) { continue; }
 
-			auto& cache = dataMgr->getElement(tile.dataIdx);
+			auto& cache = _dataMgr->getElement(tile.dataIdx);
 			cache.lockCache();
 			if (cache.state == eWaitLoading) {
 				tile.setState(eTileDataLoading);
@@ -321,45 +321,45 @@ unsigned long tileManager::_backgroundProcess() {
 }
 
 void tileManager::_updateRenderElement(mapTile& tile) {
-	auto& cache = dataMgr->getElement(tile.dataIdx);
+	auto& cache = _dataMgr->getElement(tile.dataIdx);
 	cache.lockCache();
 	if (cache.state != eReady){
 		cache.unlockCache();
 		return;
 	}
 
-	this->renderMgr->updateEle(tile.renderIdx, cache);
+	this->_renderMgr->updateEle(tile.renderIdx, cache);
 	cache.unlockCache();
 }
 RendererEle& tileManager::getRenderElement(short idx) {
-	auto& ele = renderMgr->getElement(idx);
+	auto& ele = _renderMgr->getElement(idx);
 
 	return ele;
 }
 
-tileManager::tileManager(camManager* camMgr)
+tileManager::tileManager(camManager* _camMgr)
 {
-	this->camMgr = camMgr;
+	this->_camMgr = _camMgr;
 	this->_init();
 }
 void tileManager::_init()
 {
-	this->dataMgr = new dataCache();
-	this->renderMgr = new renderCache();
+	this->_dataMgr = new dataCache();
+	this->_renderMgr = new renderCache();
 	this->_lru = new LRUCache(TILE_CACHE_SIZE);
-	if (!this->camMgr) {
+	if (!this->_camMgr) {
 		sCtrlParam ctrl;
 		ctrl.lon = 120.0;
 		ctrl.lat = 30.0;
 		ctrl.range = 400 / 108.0;
 
 		int viewport[4] = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
-		this->camMgr = new camManager(ctrl, viewport);
+		this->_camMgr = new camManager(ctrl, viewport);
 	}
 
 	// init tile pool
 	for (int i = 0; i < TILE_CACHE_SIZE+ ROOT_TILE_CACHE_SIZE; i++) {
-		auto& tile = tileCache[i];
+		auto& tile = _tileCache[i];
 		tile.setId( tileId() );
 		tile.dataIdx = -1;
 		tile.renderIdx = -1;
@@ -380,9 +380,9 @@ void tileManager::_init()
 	// root tile
 	for (int i = 0; i < 8; i++) {
 		tileId id = tileId(0, i % 4, i / 4);
-		root[i] = &tileCache[TILE_CACHE_SIZE + i];
-		root[i]->setId(id);
-		root[i]->father_idx = -1;
+		_root[i] = &_tileCache[TILE_CACHE_SIZE + i];
+		_root[i]->setId(id);
+		_root[i]->father_idx = -1;
 				
 		// 1. get data tem use
 		cacheEle* data = new cacheEle();
@@ -390,8 +390,8 @@ void tileManager::_init()
 		data->loadTexture(id);
 
 		// 2. get render cache
-		root[i]->renderIdx = RENDER_CACHE_SIZE + i;
-		RendererEle& ele = renderMgr->getElement(root[i]->renderIdx);
+		_root[i]->renderIdx = RENDER_CACHE_SIZE + i;
+		RendererEle& ele = _renderMgr->getElement(_root[i]->renderIdx);
 
 		ele.state = eRenderLoading;
 		glBindBuffer(GL_ARRAY_BUFFER, ele.vbo);
@@ -406,7 +406,7 @@ void tileManager::_init()
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glFlush();
 		ele.state = eRenderReady;
-		root[i]->setState(eTileDrawable);
+		_root[i]->setState(eTileDrawable);
 		delete data;
 	}
 
@@ -456,8 +456,8 @@ void tileManager::_init()
 
 tileManager::~tileManager()
 {
-	delete this->dataMgr;
-	delete this->renderMgr;
+	delete this->_dataMgr;
+	delete this->_renderMgr;
 
 	glDeleteBuffers(1, &ibo);
 	glDeleteBuffers(1, &tbo);
