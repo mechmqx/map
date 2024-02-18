@@ -197,14 +197,9 @@ void Draw ( ESContext *esContext )
 
 	glEnableVertexAttribArray ( userData->positionLoc );
 	glEnableVertexAttribArray ( userData->texCoordLoc );
-#if 1
+
 	glDisable(GL_CULL_FACE);
-#else
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	glFrontFace(GL_CW);
-#endif
-#if 1
+
 	auto& display_list = userData->tileMgr->tileList;
 	for (auto& idx : display_list) {
 
@@ -228,27 +223,8 @@ void Draw ( ESContext *esContext )
 			GL_FALSE,0, 0);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, userData->tileMgr->ibo);
-	    glDrawElements (GL_TRIANGLE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
-	    
-	    //glDrawElements ( GL_LINE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
+	    glDrawElements (GL_TRIANGLE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);	    
 	}
-#endif
-#if 0
-	glBindTexture(GL_TEXTURE_2D, userData->tileMgr->gTexId);
-	glActiveTexture(GL_TEXTURE0);
-	glUniform1i(userData->baseMapLoc, 0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, userData->tileMgr->gVBO);
-	glVertexAttribPointer(userData->positionLoc, 2, GL_FLOAT,
-		GL_FALSE, 0, 0);
-	// Load the texture coordinate
-	glBindBuffer(GL_ARRAY_BUFFER, userData->tileMgr->gTBO);
-	glVertexAttribPointer(userData->texCoordLoc, 2, GL_FLOAT,
-		GL_FALSE, 0, 0);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, userData->tileMgr->gIBO);
-	glDrawElements(GL_TRIANGLE_STRIP, TILE_I_NUM, GL_UNSIGNED_SHORT, NULL);
-#endif
 
 	eglSwapBuffers ( esContext->eglDisplay, esContext->eglSurface );
 }
