@@ -106,7 +106,7 @@ int Init ( ESContext *esContext )
 	userData->uViewMat4colorLoc = glGetUniformLocation(userData->programColor, "viewMat");
 	userData->uViewMat4colorLoc = glGetUniformLocation(userData->programColor, "projMat");
 
-	glClearColor ( 0.0f, 0.0f, 0.5f, 0.0f );
+	glClearColor ( 1.0f, 1.0f, 1.0f, 0.0f );
 
 	userData->ctrl.lon = 120.0;
 	userData->ctrl.lat = 30.0;
