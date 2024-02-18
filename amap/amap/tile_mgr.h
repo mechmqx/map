@@ -27,10 +27,6 @@ public:
 
 	unsigned int tbo;
 	unsigned int ibo;
-	unsigned int gTBO;
-	unsigned int gIBO;
-	unsigned int gVBO;
-	unsigned int gTexId;
 
 private:
 	LRUCache *_lru;
