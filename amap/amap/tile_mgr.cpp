@@ -16,17 +16,17 @@ mapTile& tileManager::getTile(int index) {
 	return this->tileCache[index];
 }
 
-int tileManager::getTileIndex(tileId& id) {
+int tileManager::_getTileIndex(tileId& id) {
 	return _lru->getindex(id);
 }
 
-void tileManager::updateTileIndex(tileId& id) {
+void tileManager::_updateTileIndex(tileId& id) {
 	_lru->update(id);
 	this->dataMgr->updateCacheIndex(id);
 	this->renderMgr->updateCacheIndex(id);
 }
 
-int tileManager::getFreeTile(tileId& id) {
+int tileManager::_getFreeTile(tileId& id) {
 	sIRUState state = { eIRUFresh,tileId() };
 	int idx = -1;
 	do {
@@ -45,7 +45,7 @@ int tileManager::getFreeTile(tileId& id) {
 	return idx;
 }
 
-int tileManager::getDataIndex(mapTile& tile) {
+int tileManager::_getDataIndex(mapTile& tile) {
 	tileId oldid;
 	int ret = this->dataMgr->getFreeCacheIndex(tile.getId(), oldid);
 	if (oldid.isValid()&&oldid!=tile.getId()) {
@@ -75,7 +75,7 @@ int tileManager::getDataIndex(mapTile& tile) {
 	return ret;
 }
 
-int tileManager::getRenderIndex(mapTile& tile) {
+int tileManager::_getRenderIndex(mapTile& tile) {
 	tileId oldid;
 	int ret = this->renderMgr->getFreeCacheIndex(tile.getId(), oldid);
 	if (oldid.isValid()&& oldid != tile.getId()) {
@@ -136,7 +136,7 @@ void tileManager::uploadTile() {
 			continue;    // todo, now:if tile data not ready, check next frame
 		}
 
-		UpdateRenderEle(tile);
+		_updateRenderElement(tile);
 		std::cout << "====== Upload Tile(" << tile.getId().getStr() << ") to GPU ======" << std::endl;
 		if (tile.getId().xidx == 54 && tile.getId().yidx == 20 && tile.getId().level == 4) {
 			std::cout << std::endl;
@@ -153,7 +153,7 @@ void tileManager::uploadTile() {
 #undef UPLOAD_NUM_PER_FRAME
 }
 
-bool tileManager::checkTileVisible(mapTile& tile) {
+bool tileManager::_checkTileVisible(mapTile& tile) {
 	Vec3d center = { (tile.bbx.l + tile.bbx.r) / 2,(tile.bbx.t + tile.bbx.b) / 2,0.0 };
 	double radius = (tile.bbx.r - tile.bbx.l) * 1.415;
 	return camMgr->pointInFrumstum(&center, radius);
@@ -183,7 +183,7 @@ void tileManager::updateTileList(sCtrlParam& param) {
 		stack.pop();
 
 		// 3. check visibility
-		if (!checkTileVisible(*pTile))
+		if (!_checkTileVisible(*pTile))
 			continue;
 
 		// 3.1 make child visible flag
@@ -195,7 +195,7 @@ void tileManager::updateTileList(sCtrlParam& param) {
 			child->updateBBX();
 
 			// 3.1.2 check visible
-			bool childVisible = checkTileVisible(*child);
+			bool childVisible = _checkTileVisible(*child);
 
 			// 3.1.3 if child not empty, check validation
 			if (pTile->child[i] && pTile->child[i]->getId() != child->getId())
@@ -239,7 +239,7 @@ void tileManager::updateTileList(sCtrlParam& param) {
 			for (int i = 0; i < 4; i++) {
 				bool childVisible = (pTile->childVisible & 0b1 << i);
 				if (childVisible && pTile->child[i]) {
-					updateTileIndex(pTile->child[i]->getId());
+					_updateTileIndex(pTile->child[i]->getId());
 				    stack.push(pTile->child[i]);
 				}
 			}
@@ -255,7 +255,7 @@ void tileManager::updateTileList(sCtrlParam& param) {
 				}
 				else {
 				    tileList.push_back(_lru->getindex(pTile->getId()));
-					updateTileIndex(pTile->getId());
+					_updateTileIndex(pTile->getId());
 				}
 			}
 			else {
@@ -273,14 +273,14 @@ void tileManager::updateTileList(sCtrlParam& param) {
 					if (pTile->child[i] == 0)    
 					{
 						tileId&& childid = pTile->getId().getChild(i);
-						int freeidx = getFreeTile(childid);
+						int freeidx = _getFreeTile(childid);
 						pTile->child[i] = &tileCache[freeidx];
 						pTile->child[i]->father_idx = pTile->cur_idx;
 					}				
 
 					// 6.2 check status
-					pTile->child[i]->dataIdx = getDataIndex(*pTile->child[i]);
-					pTile->child[i]->renderIdx = getRenderIndex(*pTile->child[i]);
+					pTile->child[i]->dataIdx = _getDataIndex(*pTile->child[i]);
+					pTile->child[i]->renderIdx = _getRenderIndex(*pTile->child[i]);
 				}
 			}
 		}
@@ -288,7 +288,7 @@ void tileManager::updateTileList(sCtrlParam& param) {
 	}
 }
 
-unsigned long tileManager::backgroundProcess() {
+unsigned long tileManager::_backgroundProcess() {
 	for (;;) {
 
 		for (int i = 0; i < TILE_CACHE_SIZE; i++)
@@ -320,7 +320,7 @@ unsigned long tileManager::backgroundProcess() {
 	}
 }
 
-void tileManager::UpdateRenderEle(mapTile& tile) {
+void tileManager::_updateRenderElement(mapTile& tile) {
 	auto& cache = this->dataMgr->cache[tile.dataIdx];
 	cache.lockCache();
 	if (cache.state != eReady){
@@ -331,7 +331,7 @@ void tileManager::UpdateRenderEle(mapTile& tile) {
 	this->renderMgr->updateEle(tile.renderIdx, cache);
 	cache.unlockCache();
 }
-RendererEle& tileManager::getRenderEle(short idx) {
+RendererEle& tileManager::getRenderElement(short idx) {
 	auto& ele = renderMgr->getElement(idx);
 
 	return ele;
@@ -340,9 +340,9 @@ RendererEle& tileManager::getRenderEle(short idx) {
 tileManager::tileManager(camManager* camMgr)
 {
 	this->camMgr = camMgr;
-	this->tileManager::tileManager();
+	this->_init();
 }
-tileManager::tileManager()
+void tileManager::_init()
 {
 	this->dataMgr = new dataCache();
 	this->renderMgr = new renderCache();
@@ -380,7 +380,6 @@ tileManager::tileManager()
 	// root tile
 	for (int i = 0; i < 8; i++) {
 		tileId id = tileId(0, i % 4, i / 4);
-		//int idx = getFreeTile(id);
 		root[i] = &tileCache[TILE_CACHE_SIZE + i];
 		root[i]->setId(id);
 		root[i]->father_idx = -1;
@@ -412,7 +411,7 @@ tileManager::tileManager()
 	}
 
 	// task spawn: data loading thread
-	std::thread t(&tileManager::backgroundProcess, this);
+	std::thread t(&tileManager::_backgroundProcess, this);
 	t.detach();
 
 	/*

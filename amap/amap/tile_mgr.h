@@ -14,18 +14,15 @@
 
 class tileManager
 {
-	bool checkTileVisible(mapTile& tile);
 public:
-	tileManager();
 	tileManager(camManager* camMgr);
 	~tileManager();
 	mapTile& getTile(int index);
 	void updateTileList(sCtrlParam& param);
 	void uploadTile();
-	RendererEle& getRenderEle(short idx);
+	RendererEle& getRenderElement(short idx);
 
 	std::vector<int> tileList;        // tile list to render
-	std::queue<int> loadList;         // tile queue to load data 
 	std::queue<int> uploadList;       // tile queue to upload data to GPU
 
 	unsigned int tbo;
@@ -43,13 +40,15 @@ private:
 	mapTile tileCache[TILE_CACHE_SIZE+ ROOT_TILE_CACHE_SIZE];
 	mapTile* root[8];
 
-	int getFreeTile(tileId& id);
-	int getTileIndex(tileId& id);
-	void updateTileIndex(tileId& id);
-	unsigned long backgroundProcess();
-	void UpdateRenderEle(mapTile& tile);
+	bool _checkTileVisible(mapTile& tile);
+	void _init();
+	int _getFreeTile(tileId& id);
+	int _getTileIndex(tileId& id);
+	void _updateTileIndex(tileId& id);
+	unsigned long _backgroundProcess();
+	void _updateRenderElement(mapTile& tile);
 
-	int getDataIndex(mapTile& tile);	
-    int getRenderIndex(mapTile& tile);
+	int _getDataIndex(mapTile& tile);	
+    int _getRenderIndex(mapTile& tile);
 
 };
