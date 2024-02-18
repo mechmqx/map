@@ -22,10 +22,6 @@ void renderCache::updateCacheIndex(tileId& id) {
 	_lru->update(id);
 }
 
-void renderCache::freeCache(short idx) {
-
-}
-
 RendererEle& renderCache::getElement(short idx) {
 	return cache[idx];
 }

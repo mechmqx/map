@@ -23,7 +23,7 @@ public:
 	Vec2f vert[TILE_V_NUM];
 	char image[IMG_CHN* IMG_SIZE* IMG_SIZE];
 	eCacheState state;   // 0: empty	1:load vert	2:load image	3:ready
-	tileId debugid;
+
 	void lockCache();
 	void unlockCache();
 	void genVertex(tileId& id);
@@ -31,7 +31,7 @@ public:
 	cacheEle();
 	~cacheEle();
 private:
-	HANDLE mutex;
+	HANDLE _mutex;
 };
 
 class dataCache {
@@ -40,8 +40,10 @@ public:
 	~dataCache();
 	void updateCacheIndex(tileId& id);
 	int getFreeCacheIndex(tileId& id, tileId& oldid);
-	void freeCache(short idx);
-	cacheEle cache[DATA_CACHE_SIZE];
+
+	cacheEle& getElement(short idx);
+
 private:
+	cacheEle cache[DATA_CACHE_SIZE];
 	LRUCache* _lru;
 };

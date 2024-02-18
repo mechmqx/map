@@ -6,17 +6,17 @@
 
 cacheEle::cacheEle() {
 	state = eEmpty;
-	mutex = CreateMutex(NULL, FALSE, NULL);
+	_mutex = CreateMutex(NULL, FALSE, NULL);
 }
 cacheEle::~cacheEle() {
-	CloseHandle(mutex);
+	CloseHandle(_mutex);
 }
 void cacheEle::lockCache() {
-	WaitForSingleObject(mutex, INFINITE);
+	WaitForSingleObject(_mutex, INFINITE);
 }
 
 void cacheEle::unlockCache() { 
-	ReleaseMutex(mutex); 
+	ReleaseMutex(_mutex); 
 }
 
 void cacheEle::genVertex(tileId& id) {
@@ -49,11 +49,18 @@ void cacheEle::loadTexture(tileId& id) {
 	}
 }
 
+
+cacheEle& dataCache::getElement(short idx) {
+	return cache[idx];
+}
+
 dataCache::dataCache() {
 	_lru = new LRUCache(DATA_CACHE_SIZE);
 }
 
-dataCache::~dataCache() {}
+dataCache::~dataCache() {
+	delete _lru;
+}
 
 
 void dataCache::updateCacheIndex(tileId& id)
@@ -72,8 +79,4 @@ int dataCache::getFreeCacheIndex(tileId& id, tileId& oldid) {
 	oldid = state.oldId;
 
 	return ret;
-}
-
-void dataCache::freeCache(short idx) {
-	delete _lru;
 }

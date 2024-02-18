@@ -28,7 +28,6 @@ public:
 
 	void updateCacheIndex(tileId& id);
 	int getFreeCacheIndex(tileId& id, tileId& oldid);
-	void freeCache(short idx);
 
 	RendererEle& getElement(short idx);
 	void updateEle(const int index, const cacheEle& pData);

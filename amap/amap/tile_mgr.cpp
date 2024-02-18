@@ -297,7 +297,7 @@ unsigned long tileManager::_backgroundProcess() {
 
 			if (tile.dataIdx <0 || tile.dataIdx>= DATA_CACHE_SIZE) { continue; }
 
-			auto& cache = this->dataMgr->cache[tile.dataIdx];
+			auto& cache = dataMgr->getElement(tile.dataIdx);
 			cache.lockCache();
 			if (cache.state == eWaitLoading) {
 				tile.setState(eTileDataLoading);
@@ -321,7 +321,7 @@ unsigned long tileManager::_backgroundProcess() {
 }
 
 void tileManager::_updateRenderElement(mapTile& tile) {
-	auto& cache = this->dataMgr->cache[tile.dataIdx];
+	auto& cache = dataMgr->getElement(tile.dataIdx);
 	cache.lockCache();
 	if (cache.state != eReady){
 		cache.unlockCache();

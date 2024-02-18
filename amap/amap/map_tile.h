@@ -21,7 +21,7 @@ typedef enum tagChildVisble {
 
 class mapTile
 {
-	HANDLE mutex;
+	HANDLE _mutex;
 	eTileState tilestate;
 	tileId id;
 public:
