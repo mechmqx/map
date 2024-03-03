@@ -205,7 +205,7 @@ void Draw ( ESContext *esContext )
 
 		auto& tile =userData->tileMgr->getTile(idx);
 
-		RendererEle& renderEle = userData->tileMgr->getRenderElement(tile.renderIdx);
+		RendererEle& renderEle = userData->tileMgr->getRenderEle(tile.renderIdx);
 		if (renderEle.state != eRenderReady) {
 			continue;
 		}

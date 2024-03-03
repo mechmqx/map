@@ -194,7 +194,7 @@ bool dist_cmp(const mapTile* pTileA, const mapTile* pTileB) {
 	return disA <= disB;
 }
 
-#define MAX_LEVEL (5)
+#define MAX_LEVEL (8)
 void tileManager::updateTileList(sCtrlParam& param) {
 
 	latest_ctrl = param;
@@ -382,7 +382,7 @@ unsigned long tileManager::_backgroundProcess() {
 				cache.loadTexture(tile.getId());
 
 #if 1
-				Sleep(50);
+				Sleep(1);
 #endif
 
 				cache.state = eReady;

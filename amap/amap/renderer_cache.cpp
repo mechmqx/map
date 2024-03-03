@@ -47,7 +47,7 @@ void renderCache::updateEle(const int index, const cacheEle& pData) {
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glFlush();
-	Sleep(10);
+	Sleep(1);
 	std::cout << "render cache[" << index << "] Ready." << std::endl;
 	ele.state = eRenderReady;
 }
