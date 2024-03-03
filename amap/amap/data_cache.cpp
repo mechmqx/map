@@ -49,9 +49,8 @@ void cacheEle::loadTexture(tileId& id) {
 	}
 }
 
-
 cacheEle& dataCache::getElement(short idx) {
-	return cache[idx];
+	return _cache[idx];
 }
 
 dataCache::dataCache() {
@@ -71,9 +70,9 @@ int dataCache::getFreeCacheIndex(tileId& id, tileId& oldid) {
 	sIRUState state = { eIRUFresh, tileId()};
 	int ret = _lru->get(id, state);
 	if (state.state != eIRUReady) {
-		cache[ret].lockCache();
-	    cache[ret].state = eWaitLoading;
-		cache[ret].unlockCache();
+		_cache[ret].lockCache();
+	    _cache[ret].state = eWaitLoading;
+		_cache[ret].unlockCache();
 	}
 	
 	oldid = state.oldId;

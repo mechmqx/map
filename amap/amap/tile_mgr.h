@@ -20,7 +20,7 @@ public:
 	mapTile& getTile(int index);
 	void updateTileList(sCtrlParam& param);
 	void uploadTile();
-	RendererEle& getRenderElement(short idx);
+	RendererEle& getRenderEle(short idx);
 
 	std::vector<int> tileList;        // tile list to render
 
@@ -42,7 +42,7 @@ private:
 	int _getTileIndex(tileId& id);
 	void _updateTileIndex(tileId& id);
 	unsigned long _backgroundProcess();
-	void _updateRenderElement(mapTile& tile);
+	bool _updateRenderElement(mapTile& tile);
 
 	int _getDataIndex(mapTile& tile);	
     int _getRenderIndex(mapTile& tile);

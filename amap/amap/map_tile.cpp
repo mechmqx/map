@@ -6,14 +6,14 @@
 
 mapTile::mapTile(tileId& id) {
 	setId(id);
-	_mutex = CreateMutex(NULL, FALSE, NULL);
+	mutex = CreateMutex(NULL, FALSE, NULL);
 }
 
 void mapTile::setState(eTileState state) {
 	if (!id.checkValid()) {
 		int a = 0;
 	}
-	WaitForSingleObject(_mutex, INFINITE);
+	WaitForSingleObject(mutex, INFINITE);
 
 	this->tilestate = state;
 
@@ -41,7 +41,7 @@ void mapTile::setState(eTileState state) {
 	}
 	std::cout<< std::endl;
 
-	ReleaseMutex(_mutex);
+	ReleaseMutex(mutex);
 }
 
 int mapTile::setId(tileId& id) {
@@ -92,7 +92,7 @@ mapTile::mapTile()
 
 	this->childVisible = 0;
 	this->tilestate = eTileNew;
-	_mutex = CreateMutex(NULL, FALSE, NULL);
+	mutex = CreateMutex(NULL, FALSE, NULL);
 }
 
 mapTile::~mapTile()
@@ -101,5 +101,5 @@ mapTile::~mapTile()
 		if (child[i])
 			delete child[i];
 	}
-	CloseHandle(_mutex);
+	CloseHandle(mutex);
 }

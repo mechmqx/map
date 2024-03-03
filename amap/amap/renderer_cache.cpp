@@ -4,6 +4,8 @@
 #include "glad.h"
 #else
 #include "esUtil.h"
+#include <Windows.h>
+#include <iostream>
 #endif
 
 static char dummy_data[IMG_SIZE * IMG_SIZE *3] = { 0 };
@@ -14,6 +16,9 @@ int renderCache::getFreeCacheIndex(tileId& id, tileId& oldid)
 	int idx = _lru->get(id, state);
 
 	oldid = state.oldId;
+	if (state.state == eIRUReuse) {
+		cache[idx].state = eRenderEmpty;
+	}
 	
 	return idx;
 }
@@ -29,7 +34,8 @@ RendererEle& renderCache::getElement(short idx) {
 void renderCache::updateEle(const int index, const cacheEle& pData) {
 
 	auto& ele = cache[index];
-	ele.state = eRenderLoading;
+	ele.state = eRenderUploading;
+	std::cout << "render cache[" << index << "] uploading" << std::endl;
 	glBindBuffer(GL_ARRAY_BUFFER, ele.vbo);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, TILE_V_NUM * 2 * 4, pData.vert);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -41,6 +47,8 @@ void renderCache::updateEle(const int index, const cacheEle& pData) {
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glFlush();
+	Sleep(10);
+	std::cout << "render cache[" << index << "] Ready." << std::endl;
 	ele.state = eRenderReady;
 }
 
@@ -51,6 +59,9 @@ renderCache::renderCache()
 	// init render pool
 	for (int i = 0; i < RENDER_CACHE_SIZE+ CONST_CACHE_SIZE; i++) {
 		auto& ele = cache[i];
+
+		ele.state = eRenderEmpty;
+		ele.debug_id = tileId();
 
 		glGenBuffers(1, (GLuint*)&ele.vbo);
 		glBindBuffer(GL_ARRAY_BUFFER, ele.vbo);

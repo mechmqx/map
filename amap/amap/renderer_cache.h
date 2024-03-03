@@ -6,11 +6,11 @@
 #define RENDER_CACHE_SIZE (128)
 #define CONST_CACHE_SIZE (8)
 
-enum eRendererState {
+typedef enum eRendererState {
 	eRenderEmpty,
-	eRenderLoading,
+	eRenderUploading,
 	eRenderReady,
-};
+}eRendererState;
 class RendererEle {
 public:
 	int vbo;
